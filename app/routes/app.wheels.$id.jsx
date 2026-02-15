@@ -233,6 +233,13 @@ function formatPercentValue(value) {
   return Number.isInteger(parsed) ? `${parsed}%` : `${parsed.toFixed(2)}%`;
 }
 
+function buildPreviewRewardCode(segment) {
+  if (!segment) return "PS123";
+  const raw = `${segment.value || ""} ${segment.label || ""}`.toUpperCase();
+  const normalized = raw.replace(/[^A-Z0-9]+/g, "").slice(0, 10);
+  return normalized || "PS123";
+}
+
 function ColorField({ label, value, onChange, fallback = "#000000" }) {
   const normalized = normalizeHex(value, fallback);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -446,14 +453,6 @@ export default function WheelEditor() {
       parsedConfig.initialCtaText ||
       parsedConfig.ctaText ||
       "SPIN NOW",
-    resultHeading: parsedConfig.resultHeading || "🎁 You Won!",
-    resultDescription:
-      parsedConfig.resultDescription ||
-      "Copy your code and enjoy your reward at checkout.",
-    resultCode: parsedConfig.resultCode || "PS123",
-    resultCopyButtonText: parsedConfig.resultCopyButtonText || "Copy Code",
-    resultContinueButtonText:
-      parsedConfig.resultContinueButtonText || "Continue Shopping",
     backgroundColor: normalizeHex(parsedConfig.backgroundColor, "#fff8f0"),
     headingColor: normalizeHex(parsedConfig.headingColor, "#8b4513"),
     textColor: normalizeHex(parsedConfig.textColor, "#3e2723"),
@@ -744,6 +743,7 @@ export default function WheelEditor() {
     Boolean(config.logoImageUrl) &&
     (config.logoPosition === "top_of_popup" || config.logoPosition === "both");
   const previewResultSegment = segments[0] || null;
+  const previewResultCode = buildPreviewRewardCode(previewResultSegment);
   const previewSideButtonText = config.sideTriggerButtonText || "💫 Get Discount";
   const previewCountdownTime = "11:07";
 
@@ -832,83 +832,6 @@ export default function WheelEditor() {
                   helpText="Choose how the spin wheel interaction works"
                 />
 
-                <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
-                  <BlockStack gap="300">
-                    <Text as="h3" variant="headingSm" fontWeight="semibold">
-                      Initial screen text
-                    </Text>
-                    <TextField
-                      label="Heading"
-                      value={config.initialHeading}
-                      onChange={(value) => handleConfigChange("initialHeading", value)}
-                      autoComplete="off"
-                    />
-                    <TextField
-                      label="Description"
-                      value={config.initialDescription}
-                      onChange={(value) => handleConfigChange("initialDescription", value)}
-                      autoComplete="off"
-                      multiline={3}
-                    />
-                    <InlineGrid columns={2} gap="300">
-                      <TextField
-                        label="Email placeholder"
-                        value={config.initialEmailPlaceholder}
-                        onChange={(value) => handleConfigChange("initialEmailPlaceholder", value)}
-                        autoComplete="off"
-                      />
-                      <TextField
-                        label="CTA button label"
-                        value={config.initialCtaText}
-                        onChange={(value) => handleConfigChange("initialCtaText", value)}
-                        autoComplete="off"
-                      />
-                    </InlineGrid>
-                  </BlockStack>
-                </Box>
-
-                <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
-                  <BlockStack gap="300">
-                    <Text as="h3" variant="headingSm" fontWeight="semibold">
-                      Result screen text
-                    </Text>
-                    <TextField
-                      label="Result heading"
-                      value={config.resultHeading}
-                      onChange={(value) => handleConfigChange("resultHeading", value)}
-                      autoComplete="off"
-                    />
-                    <TextField
-                      label="Result description"
-                      value={config.resultDescription}
-                      onChange={(value) => handleConfigChange("resultDescription", value)}
-                      autoComplete="off"
-                      multiline={3}
-                    />
-                    <InlineGrid columns={2} gap="300">
-                      <TextField
-                        label="Reward code"
-                        value={config.resultCode}
-                        onChange={(value) => handleConfigChange("resultCode", value)}
-                        autoComplete="off"
-                      />
-                      <TextField
-                        label="Copy button label"
-                        value={config.resultCopyButtonText}
-                        onChange={(value) => handleConfigChange("resultCopyButtonText", value)}
-                        autoComplete="off"
-                      />
-                    </InlineGrid>
-                    <TextField
-                      label="Continue button label"
-                      value={config.resultContinueButtonText}
-                      onChange={(value) =>
-                        handleConfigChange("resultContinueButtonText", value)
-                      }
-                      autoComplete="off"
-                    />
-                  </BlockStack>
-                </Box>
               </BlockStack>
             </Card>
 
@@ -1574,7 +1497,6 @@ export default function WheelEditor() {
                             borderRadius: "10px",
                             padding: "8px 10px",
                             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                            opacity: config.showCountdownAfterReveal ? 1 : 0.45,
                           }}
                         >
                           <span style={{ fontWeight: 600 }}>
@@ -1592,15 +1514,17 @@ export default function WheelEditor() {
                           </span>
                           <span
                             style={{
-                              width: "18px",
-                              height: "18px",
+                              width: "20px",
+                              height: "20px",
                               borderRadius: "50%",
                               border: `1px solid ${config.buttonTextColor}`,
+                              background: "rgba(255,255,255,0.16)",
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: "12px",
-                              lineHeight: 1,
+                              fontSize: "14px",
+                              fontWeight: 700,
+                              lineHeight: "14px",
                             }}
                           >
                             ×
@@ -1807,13 +1731,15 @@ export default function WheelEditor() {
                         <>
                           <div style={{ marginTop: "14px" }}>
                             <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
-                              <span style={{ color: config.headingColor }}>{config.resultHeading}</span>
+                              <span style={{ color: config.headingColor }}>🎁 You Won!</span>
                             </Text>
                           </div>
 
                           <div style={{ marginTop: "6px" }}>
                             <Text as="p" tone="subdued">
-                              <span style={{ color: config.textColor }}>{config.resultDescription}</span>
+                              <span style={{ color: config.textColor }}>
+                                Copy your code and enjoy your reward at checkout.
+                              </span>
                             </Text>
                           </div>
 
@@ -1842,7 +1768,7 @@ export default function WheelEditor() {
                                 color: "#303030",
                               }}
                             >
-                              {config.resultCode}
+                              {previewResultCode}
                             </div>
                             <button
                               type="button"
@@ -1856,7 +1782,7 @@ export default function WheelEditor() {
                                 cursor: "default",
                               }}
                             >
-                              {config.resultCopyButtonText}
+                              Copy Code
                             </button>
                           </div>
 
@@ -1874,7 +1800,7 @@ export default function WheelEditor() {
                                 cursor: "default",
                               }}
                             >
-                              {config.resultContinueButtonText}
+                              Continue Shopping
                             </button>
                           </div>
                         </>
