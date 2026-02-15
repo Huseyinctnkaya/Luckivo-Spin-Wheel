@@ -115,6 +115,13 @@ const PREVIEW_TABS = [
   { label: "Countdown", value: "countdown" },
 ];
 
+const CONTENT_TABS = [
+  { label: "General", value: "general" },
+  { label: "Success", value: "success" },
+  { label: "No luck", value: "no_luck" },
+  { label: "Errors", value: "errors" },
+];
+
 const DISCOUNT_TYPE_OPTIONS = [
   { label: "Percentage", value: "percentage" },
   { label: "Fixed amount", value: "fixed_amount" },
@@ -412,6 +419,8 @@ export default function WheelEditor() {
   const [previewTab, setPreviewTab] = useState("initial");
   const [previewDevice, setPreviewDevice] = useState("mobile");
   const [colorsOpen, setColorsOpen] = useState(true);
+  const [contentOpen, setContentOpen] = useState(true);
+  const [contentTab, setContentTab] = useState("general");
   const [popupRulesOpen, setPopupRulesOpen] = useState(true);
   const [discountsOpen, setDiscountsOpen] = useState(true);
   const [segmentTextColors, setSegmentTextColors] = useState(
@@ -472,6 +481,7 @@ export default function WheelEditor() {
       "left",
     ),
     sideTriggerButtonText: parsedConfig.sideTriggerButtonText || "💫 Get Discount",
+    currencySymbol: parsedConfig.currencySymbol || "$",
     showCountdownAfterReveal: Boolean(parsedConfig.showCountdownAfterReveal),
     countdownTimerText: parsedConfig.countdownTimerText || "Expires in",
     countdownPosition: getValidOptionValue(
@@ -495,6 +505,38 @@ export default function WheelEditor() {
       parsedConfig.initialCtaText ||
       parsedConfig.ctaText ||
       "SPIN NOW",
+    initialInfoText:
+      parsedConfig.initialInfoText ||
+      "By entering, you agree to receive updates and offers from our store.",
+    resultHeading: parsedConfig.resultHeading || "🎁 You Won!",
+    resultDescription:
+      parsedConfig.resultDescription ||
+      "Copy your code and enjoy your reward at checkout.",
+    resultEmailSentText:
+      parsedConfig.resultEmailSentText ||
+      "Check your email for your discount code!",
+    resultCopyCodeLabel: parsedConfig.resultCopyCodeLabel || "Copy Code",
+    resultContinueButtonLabel:
+      parsedConfig.resultContinueButtonLabel || "Continue Shopping",
+    resultMinimumSpendLabel:
+      parsedConfig.resultMinimumSpendLabel || "Minimum spend",
+    noLuckHeading: parsedConfig.noLuckHeading || "🙈 Not This Time!",
+    noLuckSubheading:
+      parsedConfig.noLuckSubheading ||
+      "Try again later — new rewards come often.",
+    errorEmailInvalid:
+      parsedConfig.errorEmailInvalid || "Please enter a valid email address",
+    errorEmailAlreadyUsed:
+      parsedConfig.errorEmailAlreadyUsed || "This email has already been used",
+    errorFrequencyLimitExceeded:
+      parsedConfig.errorFrequencyLimitExceeded ||
+      "You have reached the limit for spinning the wheel",
+    errorOneTimeOnly:
+      parsedConfig.errorOneTimeOnly ||
+      "You have reached the limit for spinning the wheel",
+    errorTryAgainLater:
+      parsedConfig.errorTryAgainLater ||
+      "Please try again later when you are eligible.",
     backgroundColor: normalizeHex(parsedConfig.backgroundColor, "#fff8f0"),
     headingColor: normalizeHex(parsedConfig.headingColor, "#8b4513"),
     textColor: normalizeHex(parsedConfig.textColor, "#3e2723"),
@@ -1158,26 +1200,25 @@ export default function WheelEditor() {
                     </InlineStack>
 
                     {config.showSideTriggerButton ? (
-                      <InlineGrid columns={2} gap="300">
-                        <Select
-                          label="Trigger type"
-                          options={SIDE_TRIGGER_TYPE_OPTIONS}
-                          value={config.sideTriggerType}
-                          onChange={(value) => handleConfigChange("sideTriggerType", value)}
-                        />
-                        <Select
-                          label="Position"
-                          options={SIDE_TRIGGER_POSITION_OPTIONS}
-                          value={config.sideTriggerPosition}
-                          onChange={(value) => handleConfigChange("sideTriggerPosition", value)}
-                        />
-                        <TextField
-                          label="Button text"
-                          value={config.sideTriggerButtonText}
-                          onChange={(value) => handleConfigChange("sideTriggerButtonText", value)}
-                          autoComplete="off"
-                        />
-                      </InlineGrid>
+                      <BlockStack gap="300">
+                        <InlineGrid columns={2} gap="300">
+                          <Select
+                            label="Trigger type"
+                            options={SIDE_TRIGGER_TYPE_OPTIONS}
+                            value={config.sideTriggerType}
+                            onChange={(value) => handleConfigChange("sideTriggerType", value)}
+                          />
+                          <Select
+                            label="Position"
+                            options={SIDE_TRIGGER_POSITION_OPTIONS}
+                            value={config.sideTriggerPosition}
+                            onChange={(value) => handleConfigChange("sideTriggerPosition", value)}
+                          />
+                        </InlineGrid>
+                        <Text as="p" tone="subdued">
+                          Button text is managed in Content → General.
+                        </Text>
+                      </BlockStack>
                     ) : null}
                   </BlockStack>
                 </Box>
@@ -1200,20 +1241,232 @@ export default function WheelEditor() {
                     </InlineStack>
 
                     {config.showCountdownAfterReveal ? (
-                      <InlineGrid columns={2} gap="300">
-                        <TextField
-                          label="Countdown timer text"
-                          value={config.countdownTimerText}
-                          onChange={(value) => handleConfigChange("countdownTimerText", value)}
-                          autoComplete="off"
-                        />
+                      <BlockStack gap="300">
                         <Select
                           label="Position"
                           options={COUNTDOWN_POSITION_OPTIONS}
                           value={config.countdownPosition}
                           onChange={(value) => handleConfigChange("countdownPosition", value)}
                         />
-                      </InlineGrid>
+                        <Text as="p" tone="subdued">
+                          Countdown text is managed in Content → Success.
+                        </Text>
+                      </BlockStack>
+                    ) : null}
+                  </BlockStack>
+                </Box>
+              </div>
+            </Card>
+
+            <Card padding="0">
+              <Box padding="400">
+                <InlineStack align="space-between" blockAlign="center">
+                  <div>
+                    <Text variant="headingMd" as="h2" fontWeight="bold">
+                      Content
+                    </Text>
+                    <Text as="p" tone="subdued">
+                      Edit text content for the popup
+                    </Text>
+                  </div>
+                  <Button
+                    variant="plain"
+                    icon={contentOpen ? ChevronUpIcon : ChevronDownIcon}
+                    onClick={() => setContentOpen((open) => !open)}
+                    accessibilityLabel="Toggle content section"
+                  />
+                </InlineStack>
+              </Box>
+
+              <div
+                style={{
+                  maxHeight: contentOpen ? "2200px" : "0px",
+                  overflow: contentOpen ? "visible" : "hidden",
+                  opacity: contentOpen ? 1 : 0,
+                  transitionDuration: "500ms",
+                  transitionTimingFunction: "ease-in-out",
+                  transitionProperty: "max-height, opacity",
+                  pointerEvents: contentOpen ? "auto" : "none",
+                }}
+              >
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <BlockStack gap="300">
+                    <InlineStack gap="200">
+                      {CONTENT_TABS.map((tab) => (
+                        <Button
+                          key={tab.value}
+                          size="slim"
+                          variant={contentTab === tab.value ? "secondary" : "tertiary"}
+                          onClick={() => setContentTab(tab.value)}
+                        >
+                          {tab.label}
+                        </Button>
+                      ))}
+                    </InlineStack>
+
+                    {contentTab === "general" ? (
+                      <BlockStack gap="300">
+                        <TextField
+                          label="Currency"
+                          value={config.currencySymbol}
+                          onChange={(value) => handleConfigChange("currencySymbol", value)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Heading"
+                          value={config.initialHeading}
+                          onChange={(value) => handleConfigChange("initialHeading", value)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Subheading"
+                          value={config.initialDescription}
+                          onChange={(value) => handleConfigChange("initialDescription", value)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Email placeholder"
+                          value={config.initialEmailPlaceholder}
+                          onChange={(value) =>
+                            handleConfigChange("initialEmailPlaceholder", value)
+                          }
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Button text"
+                          value={config.initialCtaText}
+                          onChange={(value) => handleConfigChange("initialCtaText", value)}
+                          autoComplete="off"
+                        />
+                        <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
+                          <BlockStack gap="300">
+                            <TextField
+                              label="Info text"
+                              value={config.initialInfoText}
+                              onChange={(value) => handleConfigChange("initialInfoText", value)}
+                              autoComplete="off"
+                            />
+                            <TextField
+                              label="Side trigger button text"
+                              value={config.sideTriggerButtonText}
+                              onChange={(value) => handleConfigChange("sideTriggerButtonText", value)}
+                              autoComplete="off"
+                            />
+                          </BlockStack>
+                        </Box>
+                      </BlockStack>
+                    ) : null}
+
+                    {contentTab === "success" ? (
+                      <BlockStack gap="300">
+                        <TextField
+                          label="Heading"
+                          value={config.resultHeading}
+                          onChange={(value) => handleConfigChange("resultHeading", value)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Subheading"
+                          value={config.resultDescription}
+                          onChange={(value) => handleConfigChange("resultDescription", value)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Email sent text"
+                          value={config.resultEmailSentText}
+                          onChange={(value) => handleConfigChange("resultEmailSentText", value)}
+                          helpText="Check out the 'Email' page to enable this setting."
+                          autoComplete="off"
+                        />
+                        <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
+                          <InlineGrid columns={2} gap="300">
+                            <TextField
+                              label="Copy code"
+                              value={config.resultCopyCodeLabel}
+                              onChange={(value) => handleConfigChange("resultCopyCodeLabel", value)}
+                              autoComplete="off"
+                            />
+                            <TextField
+                              label="Continue shopping"
+                              value={config.resultContinueButtonLabel}
+                              onChange={(value) =>
+                                handleConfigChange("resultContinueButtonLabel", value)
+                              }
+                              autoComplete="off"
+                            />
+                          </InlineGrid>
+                        </Box>
+                        <TextField
+                          label="Minimum spend label"
+                          value={config.resultMinimumSpendLabel}
+                          onChange={(value) => handleConfigChange("resultMinimumSpendLabel", value)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Expires in label"
+                          value={config.countdownTimerText}
+                          onChange={(value) => handleConfigChange("countdownTimerText", value)}
+                          autoComplete="off"
+                        />
+                      </BlockStack>
+                    ) : null}
+
+                    {contentTab === "no_luck" ? (
+                      <BlockStack gap="300">
+                        <TextField
+                          label="Heading"
+                          value={config.noLuckHeading}
+                          onChange={(value) => handleConfigChange("noLuckHeading", value)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Subheading"
+                          value={config.noLuckSubheading}
+                          onChange={(value) => handleConfigChange("noLuckSubheading", value)}
+                          autoComplete="off"
+                        />
+                      </BlockStack>
+                    ) : null}
+
+                    {contentTab === "errors" ? (
+                      <BlockStack gap="300">
+                        <TextField
+                          label="Email invalid"
+                          value={config.errorEmailInvalid}
+                          onChange={(value) => handleConfigChange("errorEmailInvalid", value)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Email already used"
+                          value={config.errorEmailAlreadyUsed}
+                          onChange={(value) => handleConfigChange("errorEmailAlreadyUsed", value)}
+                          autoComplete="off"
+                        />
+                        <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
+                          <BlockStack gap="300">
+                            <TextField
+                              label="Frequency limit exceeded"
+                              value={config.errorFrequencyLimitExceeded}
+                              onChange={(value) =>
+                                handleConfigChange("errorFrequencyLimitExceeded", value)
+                              }
+                              autoComplete="off"
+                            />
+                            <TextField
+                              label="One time only message"
+                              value={config.errorOneTimeOnly}
+                              onChange={(value) => handleConfigChange("errorOneTimeOnly", value)}
+                              autoComplete="off"
+                            />
+                            <TextField
+                              label="Try again later message"
+                              value={config.errorTryAgainLater}
+                              onChange={(value) => handleConfigChange("errorTryAgainLater", value)}
+                              autoComplete="off"
+                            />
+                          </BlockStack>
+                        </Box>
+                      </BlockStack>
                     ) : null}
                   </BlockStack>
                 </Box>
@@ -1971,14 +2224,22 @@ export default function WheelEditor() {
                         <>
                           <div style={{ marginTop: "14px" }}>
                             <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
-                              <span style={{ color: config.headingColor }}>🎁 You Won!</span>
+                              <span style={{ color: config.headingColor }}>{config.resultHeading}</span>
                             </Text>
                           </div>
 
                           <div style={{ marginTop: "6px" }}>
                             <Text as="p" tone="subdued">
                               <span style={{ color: config.textColor }}>
-                                Copy your code and enjoy your reward at checkout.
+                                {config.resultDescription}
+                              </span>
+                            </Text>
+                          </div>
+
+                          <div style={{ marginTop: "4px" }}>
+                            <Text as="p" tone="subdued">
+                              <span style={{ color: config.textColor }}>
+                                {config.resultEmailSentText}
                               </span>
                             </Text>
                           </div>
@@ -2022,7 +2283,7 @@ export default function WheelEditor() {
                                 cursor: "default",
                               }}
                             >
-                              Copy Code
+                              {config.resultCopyCodeLabel}
                             </button>
                           </div>
 
@@ -2040,7 +2301,7 @@ export default function WheelEditor() {
                                 cursor: "default",
                               }}
                             >
-                              Continue Shopping
+                              {config.resultContinueButtonLabel}
                             </button>
                           </div>
                         </>
@@ -2090,6 +2351,13 @@ export default function WheelEditor() {
                             >
                               {config.initialCtaText}
                             </button>
+                            <div style={{ marginTop: "10px", textAlign: "left" }}>
+                              <Text as="p" tone="subdued">
+                                <span style={{ color: config.textColor }}>
+                                  {config.initialInfoText}
+                                </span>
+                              </Text>
+                            </div>
                           </div>
                         </>
                       )}
