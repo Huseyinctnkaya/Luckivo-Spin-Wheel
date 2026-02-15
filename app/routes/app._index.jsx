@@ -1,85 +1,109 @@
 import { json } from "@remix-run/node";
-import { useLoaderData, useSearchParams } from "@remix-run/react";
+import { useLoaderData, useSearchParams, Link } from "@remix-run/react";
 import {
   Page,
-  Layout,
   Text,
-  Card,
   Button,
   BlockStack,
   InlineStack,
   Icon,
   Popover,
   ActionList,
+  Badge,
+  Tooltip,
 } from "@shopify/polaris";
-import { CalendarIcon, ChevronRightIcon, ChevronLeftIcon } from "@shopify/polaris-icons";
+import {
+  CalendarIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+
+async function checkAppEmbedEnabled(admin) {
+  try {
+    const response = await admin.graphql(`
+      {
+        themes(first: 1, roles: MAIN) {
+          nodes {
+            files(filenames: ["config/settings_data.json"]) {
+              nodes {
+                body {
+                  ... on OnlineStoreThemeFileBodyText {
+                    content
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `);
+    const data = await response.json();
+    const content = data?.data?.themes?.nodes?.[0]?.files?.nodes?.[0]?.body?.content;
+    if (!content) return false;
+    const settings = JSON.parse(content);
+    const blocks = settings?.current?.blocks || {};
+    for (const block of Object.values(blocks)) {
+      if (
+        typeof block.type === "string" &&
+        block.type.includes("cf1449e6-459b-e542-07bc-86519a150ef9e95a1f96") &&
+        block.disabled !== true
+      ) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
 
 export const loader = async ({ request }) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const url = new URL(request.url);
 
   const days = parseInt(url.searchParams.get("days") || "7", 10);
   const offset = parseInt(url.searchParams.get("offset") || "0", 10);
 
-  // Calculate date range based on days + offset
   const now = new Date();
   const endDate = new Date(now);
-  endDate.setDate(endDate.getDate() - (offset * days));
+  endDate.setDate(endDate.getDate() - offset * days);
   endDate.setHours(23, 59, 59, 999);
 
   const startDate = new Date(endDate);
   startDate.setDate(startDate.getDate() - days + 1);
   startDate.setHours(0, 0, 0, 0);
 
-  const dateFilter = {
-    gte: startDate,
-    lte: endDate,
-  };
+  const dateFilter = { gte: startDate, lte: endDate };
 
-  // Format dates for display
-  const formatDate = (d) => {
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
+  const formatDate = (d) =>
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const dateRangeLabel = `${formatDate(startDate)} - ${formatDate(endDate)}`;
 
   try {
-    if (!db.impression) {
-      return json({
-        totalImpressions: 0,
-        totalSpins: 0,
-        emailsCollected: 0,
-        conversionRate: 0,
-        days,
-        offset,
-        dateRangeLabel,
-        error: "Prisma client out of sync",
-      });
-    }
-
-    const [totalImpressions, totalSpins, emailsCollected] = await Promise.all([
-      db.impression.count({
-        where: {
-          shop: session.shop,
-          createdAt: dateFilter,
-        },
-      }),
-      db.spin.count({
-        where: {
-          wheel: { shop: session.shop },
-          createdAt: dateFilter,
-        },
-      }),
-      db.spin.count({
-        where: {
-          wheel: { shop: session.shop },
-          createdAt: dateFilter,
-          customerEmail: { not: null },
-        },
-      }),
-    ]);
+    const [totalImpressions, totalSpins, emailsCollected, totalWheels, activeWheels, appEnabled] =
+      await Promise.all([
+        db.impression.count({
+          where: { shop: session.shop, createdAt: dateFilter },
+        }),
+        db.spin.count({
+          where: { wheel: { shop: session.shop }, createdAt: dateFilter },
+        }),
+        db.spin.count({
+          where: {
+            wheel: { shop: session.shop },
+            createdAt: dateFilter,
+            customerEmail: { not: null },
+          },
+        }),
+        db.wheel.count({ where: { shop: session.shop } }),
+        db.wheel.count({ where: { shop: session.shop, isActive: true } }),
+        checkAppEmbedEnabled(admin),
+      ]);
 
     const conversionRate =
       totalImpressions > 0
@@ -94,6 +118,11 @@ export const loader = async ({ request }) => {
       days,
       offset,
       dateRangeLabel,
+      setup: {
+        appEnabled,
+        hasCampaign: totalWheels > 0,
+        hasActiveCampaign: activeWheels > 0,
+      },
     });
   } catch (error) {
     console.error("Dashboard Loader Error:", error);
@@ -105,7 +134,7 @@ export const loader = async ({ request }) => {
       days,
       offset,
       dateRangeLabel,
-      error: "Database error",
+      setup: { appEnabled: false, hasCampaign: false, hasActiveCampaign: false },
     });
   }
 };
@@ -119,6 +148,7 @@ export default function Index() {
     days,
     offset,
     dateRangeLabel,
+    setup,
   } = useLoaderData();
 
   const [, setSearchParams] = useSearchParams();
@@ -129,7 +159,7 @@ export default function Index() {
     [],
   );
 
-  const navigate = (newDays, newOffset) => {
+  const updateParams = (newDays, newOffset) => {
     const params = new URLSearchParams();
     params.set("days", String(newDays));
     params.set("offset", String(newOffset));
@@ -137,13 +167,13 @@ export default function Index() {
   };
 
   const handleDaysChange = (newDays) => {
-    navigate(newDays, 0);
+    updateParams(newDays, 0);
     setDatePickerOpen(false);
   };
 
-  const handlePrev = () => navigate(days, offset + 1);
+  const handlePrev = () => updateParams(days, offset + 1);
   const handleNext = () => {
-    if (offset > 0) navigate(days, offset - 1);
+    if (offset > 0) updateParams(days, offset - 1);
   };
 
   const dayOptions = [
@@ -159,10 +189,10 @@ export default function Index() {
   };
 
   const stats = [
-    { label: "Popups Displayed", value: totalImpressions },
-    { label: "Forms Submitted", value: totalSpins },
-    { label: "Emails Collected", value: emailsCollected },
-    { label: "Conversions", value: conversionRate },
+    { label: "Popups Displayed", value: totalImpressions, tooltip: "Number of times the spin wheel popup was shown." },
+    { label: "Forms Submitted", value: totalSpins, tooltip: "Number of wheel spins completed by visitors." },
+    { label: "Emails Collected", value: emailsCollected, tooltip: "Number of emails collected from visitors." },
+    { label: "Conversions", value: conversionRate, tooltip: "Percentage of popups that resulted in a spin." },
   ];
 
   return (
@@ -179,7 +209,6 @@ export default function Index() {
             overflow: "hidden",
           }}
         >
-          {/* Date Picker */}
           <div
             style={{
               padding: "16px 20px",
@@ -209,30 +238,10 @@ export default function Index() {
             </Popover>
           </div>
 
-          {/* Stat Cells */}
           {stats.map((stat) => (
-            <div
-              key={stat.label}
-              style={{
-                padding: "16px 20px",
-                borderRight: "1px solid #e3e3e3",
-                flex: 1,
-                minWidth: 0,
-                overflow: "hidden",
-              }}
-            >
-              <Text variant="bodySm" fontWeight="semibold" tone="subdued">
-                <span style={titleStyle}>{stat.label}</span>
-              </Text>
-              <div style={{ marginTop: "4px" }}>
-                <Text variant="headingLg" as="p" fontWeight="bold" tone="success">
-                  {stat.value}
-                </Text>
-              </div>
-            </div>
+            <StatCell key={stat.label} stat={stat} titleStyle={titleStyle} />
           ))}
 
-          {/* Arrow Navigation */}
           <div
             style={{
               display: "flex",
@@ -278,44 +287,302 @@ export default function Index() {
           </div>
         </div>
 
-        {/* Action Cards */}
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Getting Started
-                </Text>
-                <Text variant="bodyMd" as="p">
-                  Your lucky wheel is ready to collect emails and boost
-                  conversions.
-                </Text>
-                <InlineStack gap="300">
-                  <Button variant="primary" url="/app/wheels">
-                    Manage Your Wheels
-                  </Button>
-                  <Button url="/app/wheels/new">Create a New Wheel</Button>
-                </InlineStack>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
+        {/* Setup Guide */}
+        <SetupGuide setup={setup} />
 
-          <Layout.Section variant="oneThird">
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Support
+        {/* Quick Access Cards */}
+        <InlineStack gap="400" align="start" wrap={false}>
+          {[
+            {
+              title: "Campaigns",
+              description: "Create, manage or schedule your campaigns.",
+              button: "View campaigns",
+              url: "/app/wheels",
+            },
+            {
+              title: "Subscribers",
+              description: "View and manage your subscribers who signed up for the spin wheel.",
+              button: "View subscribers",
+              url: "/app/subscribers",
+            },
+            {
+              title: "Analytics",
+              description: "View your campaign performance and conversions.",
+              button: "View analytics",
+              url: "/app/analytics",
+            },
+          ].map((card) => (
+            <div
+              key={card.title}
+              style={{
+                flex: 1,
+                background: "var(--p-color-bg-surface)",
+                border: "1px solid #e3e3e3",
+                borderRadius: "12px",
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                minHeight: "140px",
+              }}
+            >
+              <BlockStack gap="200">
+                <Text variant="headingMd" as="h3" fontWeight="bold">
+                  {card.title}
                 </Text>
-                <Text variant="bodyMd" as="p">
-                  Need help setting up your wheel triggers? Check our
-                  documentation.
+                <Text variant="bodyMd" tone="subdued">
+                  {card.description}
                 </Text>
-                <Button variant="plain">Read Documentation</Button>
               </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
+              <div style={{ marginTop: "16px" }}>
+                <Link to={card.url} style={{ textDecoration: "none" }}>
+                  <Button variant="primary">{card.button}</Button>
+                </Link>
+              </div>
+            </div>
+          ))}
+        </InlineStack>
       </BlockStack>
     </Page>
+  );
+}
+
+function SetupGuide({ setup }) {
+  const completedCount = [setup.appEnabled, setup.hasCampaign, setup.hasActiveCampaign].filter(Boolean).length;
+  const [expanded, setExpanded] = useState(completedCount < 3);
+  const [activeStep, setActiveStep] = useState(
+    !setup.appEnabled ? 0 : !setup.hasCampaign ? 1 : !setup.hasActiveCampaign ? 2 : 0,
+  );
+
+  const steps = [
+    {
+      title: "Enable the app",
+      description: "Enable the app to start using the spin wheel popup.",
+      completed: setup.appEnabled,
+      action: { label: "Enable", url: null },
+      secondaryAction: { label: "Refresh", url: "." },
+    },
+    {
+      title: "Create your first campaign",
+      description: "Set up a spin wheel with custom segments and prizes.",
+      completed: setup.hasCampaign,
+      action: { label: "Create campaign", url: "/app/wheels/new" },
+    },
+    {
+      title: "Activate your campaign",
+      description: "Publish your wheel so customers can start spinning.",
+      completed: setup.hasActiveCampaign,
+      action: { label: "Go to campaigns", url: "/app/wheels" },
+    },
+  ];
+
+  return (
+    <div
+      style={{
+        background: "var(--p-color-bg-surface)",
+        border: "1px solid #e3e3e3",
+        borderRadius: "12px",
+        overflow: "hidden",
+      }}
+    >
+      {/* Header */}
+      <div
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          padding: "16px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          cursor: "pointer",
+        }}
+      >
+        <InlineStack gap="300" blockAlign="center">
+          <Text variant="headingMd" as="h2" fontWeight="bold">
+            Setup Guide
+          </Text>
+          <Badge tone={completedCount === 3 ? "success" : undefined}>
+            {completedCount} / 3 completed
+          </Badge>
+        </InlineStack>
+        <div style={{ display: "flex" }}>
+          <Icon source={expanded ? ChevronUpIcon : ChevronDownIcon} tone="base" />
+        </div>
+      </div>
+
+      <Collapsible open={expanded}>
+        <div style={{ padding: "0 20px 12px" }}>
+          <Text variant="bodyMd" tone="subdued">
+            Use this personalized guide to get your app up and running.
+          </Text>
+        </div>
+
+        <div style={{ borderTop: "1px solid #f1f1f1" }}>
+          {steps.map((step, i) => (
+            <SetupStep
+              key={step.title}
+              step={step}
+              index={i}
+              isActive={activeStep === i}
+              onToggle={() => setActiveStep(activeStep === i ? -1 : i)}
+            />
+          ))}
+        </div>
+      </Collapsible>
+    </div>
+  );
+}
+
+function SetupStep({ step, isActive, onToggle }) {
+  return (
+    <div style={{ borderTop: "1px solid #f1f1f1" }}>
+      <div
+        onClick={onToggle}
+        style={{
+          padding: "14px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            width: "20px",
+            height: "20px",
+            borderRadius: "50%",
+            border: step.completed ? "none" : "2px dashed #8c9196",
+            background: step.completed ? "#303030" : "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          {step.completed && (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+        <Text variant="bodyMd" fontWeight={isActive ? "semibold" : "regular"}>
+          {step.title}
+        </Text>
+      </div>
+
+      <Collapsible open={isActive}>
+        <div style={{ padding: "0 20px 16px 52px" }}>
+          {step.completed ? (
+            <Text variant="bodyMd" tone="success">
+              Completed
+            </Text>
+          ) : (
+            <BlockStack gap="300">
+              <Text variant="bodyMd" tone="subdued">
+                {step.description}
+              </Text>
+              <InlineStack gap="300" blockAlign="center">
+                {step.action.url ? (
+                  <Link to={step.action.url} style={{ textDecoration: "none" }}>
+                    <Button variant="primary">{step.action.label}</Button>
+                  </Link>
+                ) : (
+                  <Button variant="primary">{step.action.label}</Button>
+                )}
+                {step.secondaryAction && (
+                  <Link to={step.secondaryAction.url} style={{ textDecoration: "none" }}>
+                    <Button variant="plain">{step.secondaryAction.label}</Button>
+                  </Link>
+                )}
+              </InlineStack>
+            </BlockStack>
+          )}
+        </div>
+      </Collapsible>
+    </div>
+  );
+}
+
+function Collapsible({ open, children }) {
+  const ref = useRef(null);
+  const [height, setHeight] = useState(open ? "auto" : "0px");
+  const [visible, setVisible] = useState(open);
+  const initial = useRef(true);
+
+  useEffect(() => {
+    if (initial.current) {
+      initial.current = false;
+      return;
+    }
+    const el = ref.current;
+    if (!el) return;
+
+    if (open) {
+      setVisible(true);
+      el.style.height = "0px";
+      requestAnimationFrame(() => {
+        setHeight(`${el.scrollHeight}px`);
+        const done = () => {
+          setHeight("auto");
+          el.removeEventListener("transitionend", done);
+        };
+        el.addEventListener("transitionend", done);
+      });
+    } else {
+      setHeight(`${el.scrollHeight}px`);
+      requestAnimationFrame(() => {
+        setHeight("0px");
+        const done = () => {
+          setVisible(false);
+          el.removeEventListener("transitionend", done);
+        };
+        el.addEventListener("transitionend", done);
+      });
+    }
+  }, [open]);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        height,
+        overflow: "hidden",
+        transition: "height 250ms ease",
+        visibility: visible || open ? "visible" : "hidden",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function StatCell({ stat, titleStyle }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: "16px 20px",
+        borderRight: "1px solid #e3e3e3",
+        flex: 1,
+        minWidth: 0,
+        overflow: "hidden",
+        background: hovered ? "#f6f6f7" : "transparent",
+        transition: "background 150ms ease",
+        cursor: "default",
+      }}
+    >
+      <Tooltip content={stat.tooltip}>
+        <Text variant="bodySm" fontWeight="semibold" tone="subdued">
+          <span style={titleStyle}>{stat.label}</span>
+        </Text>
+      </Tooltip>
+      <div style={{ marginTop: "4px" }}>
+        <Text variant="headingLg" as="p" fontWeight="bold" tone="success">
+          {stat.value}
+        </Text>
+      </div>
+    </div>
   );
 }
