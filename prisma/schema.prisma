@@ -41,6 +41,7 @@ model Wheel {
   config      String   @default("{}") // JSON string for design settings (colors, triggers, etc.)
   segments    Segment[]
   spins       Spin[]
+  impressions Impression[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -63,5 +64,13 @@ model Spin {
   customerEmail String?
   result      String   // Segment label or value won
   couponCode  String?
+  createdAt   DateTime @default(now())
+}
+
+model Impression {
+  id          String   @id @default(uuid())
+  wheelId     String
+  wheel       Wheel    @relation(fields: [wheelId], references: [id], onDelete: Cascade)
+  shop        String
   createdAt   DateTime @default(now())
 }

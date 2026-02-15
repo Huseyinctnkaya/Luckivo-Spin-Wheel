@@ -63,6 +63,20 @@ export const action = async ({ request }) => {
         });
     }
 
+    if (pathname.endsWith("/track-impression")) {
+        const body = await request.json();
+        const { wheelId, shop } = body;
+
+        await db.impression.create({
+            data: {
+                wheelId,
+                shop
+            }
+        });
+
+        return json({ success: true });
+    }
+
     return json({ error: "Not Found" }, { status: 404 });
 };
 

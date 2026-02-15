@@ -22,8 +22,18 @@
                 wheelConfig = data.wheel;
                 drawWheel();
                 // Show after a delay for testing
-                setTimeout(() => {
+                setTimeout(async () => {
                     overlay.style.display = 'flex';
+                    // Track Impression
+                    try {
+                        await fetch(`${proxyUrl}/track-impression`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ shop, wheelId: wheelConfig.id })
+                        });
+                    } catch (err) {
+                        console.error('Failed to track impression:', err);
+                    }
                 }, 3000);
             }
         } catch (e) {
