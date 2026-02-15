@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
 import {
@@ -56,6 +56,12 @@ const PREVIEW_TABS = [
   { label: "Countdown", value: "countdown" },
 ];
 
+const LOGO_POSITION_OPTIONS = [
+  { label: "Center of wheel", value: "center_of_wheel" },
+  { label: "Top of popup", value: "top_of_popup" },
+  { label: "Both", value: "both" },
+];
+
 function parseConfig(rawConfig) {
   try {
     return JSON.parse(rawConfig || "{}");
@@ -109,6 +115,15 @@ function buildWheelGradient(segments) {
   });
 
   return `conic-gradient(${parts.join(", ")})`;
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("Image could not be read"));
+    reader.readAsDataURL(file);
+  });
 }
 
 function ColorField({ label, value, onChange, fallback = "#000000" }) {
@@ -232,6 +247,8 @@ export const action = async ({ request, params }) => {
 export default function WheelEditor() {
   const { wheel } = useLoaderData();
   const parsedConfig = useMemo(() => parseConfig(wheel.config), [wheel.config]);
+  const logoInputRef = useRef(null);
+  const backgroundInputRef = useRef(null);
 
   const [title, setTitle] = useState(wheel.title);
   const [isActive, setIsActive] = useState(wheel.isActive);
@@ -273,6 +290,13 @@ export default function WheelEditor() {
       parsedConfig.wheelCenterColor || parsedConfig.primaryColor,
       "#f6b347",
     ),
+    logoImageUrl: parsedConfig.logoImageUrl || "",
+    backgroundImageUrl: parsedConfig.backgroundImageUrl || "",
+    logoPosition: getValidOptionValue(
+      LOGO_POSITION_OPTIONS,
+      parsedConfig.logoPosition,
+      "center_of_wheel",
+    ),
   });
 
   const submit = useSubmit();
@@ -310,6 +334,41 @@ export default function WheelEditor() {
       [segmentId]: normalizeHex(value, "#4a1e00"),
     }));
   };
+
+  const handleLogoFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      handleConfigChange("logoImageUrl", dataUrl);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleBackgroundFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      handleConfigChange("backgroundImageUrl", dataUrl);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const showCenterLogo =
+    Boolean(config.logoImageUrl) &&
+    (config.logoPosition === "center_of_wheel" || config.logoPosition === "both");
+  const showTopLogo =
+    Boolean(config.logoImageUrl) &&
+    (config.logoPosition === "top_of_popup" || config.logoPosition === "both");
 
   const handleSave = () => {
     submit(
@@ -402,7 +461,7 @@ export default function WheelEditor() {
 
               <div
                 style={{
-                  maxHeight: colorsOpen ? "2200px" : "0px",
+                  maxHeight: colorsOpen ? "3400px" : "0px",
                   overflow: colorsOpen ? "visible" : "hidden",
                   opacity: colorsOpen ? 1 : 0,
                   transitionDuration: "500ms",
@@ -489,6 +548,115 @@ export default function WheelEditor() {
                         </div>
                       ))}
                     </InlineGrid>
+                  </Box>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border">
+                  <Box padding="400">
+                    <BlockStack gap="300">
+                      <Text variant="headingSm" as="h3" fontWeight="semibold">
+                        Logo & Background image
+                      </Text>
+
+                      <InlineStack gap="200">
+                        <Button onClick={() => backgroundInputRef.current?.click()}>
+                          {config.backgroundImageUrl ? "Change background image" : "Select background image"}
+                        </Button>
+                        {config.backgroundImageUrl ? (
+                          <Button
+                            tone="critical"
+                            variant="plain"
+                            onClick={() => handleConfigChange("backgroundImageUrl", "")}
+                          >
+                            Remove background
+                          </Button>
+                        ) : null}
+                      </InlineStack>
+
+                      {config.backgroundImageUrl ? (
+                        <div
+                          style={{
+                            width: "120px",
+                            height: "74px",
+                            borderRadius: "8px",
+                            border: "1px solid #d2d5d8",
+                            backgroundImage: `url(${config.backgroundImageUrl})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                        />
+                      ) : null}
+
+                      <InlineGrid columns={2} gap="300">
+                        <div>
+                          <Text as="p" variant="bodyMd" tone="subdued">
+                            Logo image
+                          </Text>
+                          <div style={{ marginTop: "8px" }}>
+                            <InlineStack gap="200" blockAlign="center">
+                              {config.logoImageUrl ? (
+                                <div
+                                  style={{
+                                    width: "34px",
+                                    height: "34px",
+                                    borderRadius: "50%",
+                                    border: "1px solid #d2d5d8",
+                                    background: "#fff",
+                                    overflow: "hidden",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <img
+                                    src={config.logoImageUrl}
+                                    alt="Logo preview"
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  />
+                                </div>
+                              ) : null}
+
+                              {config.logoImageUrl ? (
+                                <>
+                                  <Button
+                                    tone="critical"
+                                    variant="plain"
+                                    onClick={() => handleConfigChange("logoImageUrl", "")}
+                                  >
+                                    Remove logo
+                                  </Button>
+                                  <Button onClick={() => logoInputRef.current?.click()}>Change</Button>
+                                </>
+                              ) : (
+                                <Button onClick={() => logoInputRef.current?.click()}>Select logo image</Button>
+                              )}
+                            </InlineStack>
+                          </div>
+                        </div>
+
+                        <Select
+                          label="Position of logo"
+                          options={LOGO_POSITION_OPTIONS}
+                          value={config.logoPosition}
+                          onChange={(value) => handleConfigChange("logoPosition", value)}
+                        />
+                      </InlineGrid>
+
+                      <input
+                        ref={backgroundInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleBackgroundFileChange}
+                        style={{ display: "none" }}
+                      />
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoFileChange}
+                        style={{ display: "none" }}
+                      />
+                    </BlockStack>
                   </Box>
                 </Box>
               </div>
@@ -618,9 +786,41 @@ export default function WheelEditor() {
                     margin: "0 auto",
                     maxWidth: previewDevice === "mobile" ? "300px" : "520px",
                     textAlign: "center",
-                    padding: "8px 0",
+                    padding: "12px",
+                    borderRadius: "12px",
+                    backgroundColor: config.backgroundColor,
+                    backgroundImage: config.backgroundImageUrl
+                      ? `url(${config.backgroundImageUrl})`
+                      : "none",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
                   }}
                 >
+                  {showTopLogo ? (
+                    <div
+                      style={{
+                        margin: "0 auto 12px",
+                        width: "58px",
+                        height: "58px",
+                        borderRadius: "50%",
+                        border: "2px solid #fff",
+                        overflow: "hidden",
+                        background: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+                      }}
+                    >
+                      <img
+                        src={config.logoImageUrl}
+                        alt="Wheel logo"
+                        style={{ width: "100%", height: "100%", objectFit: "contain", padding: "6px" }}
+                      />
+                    </div>
+                  ) : null}
+
                   <div
                     style={{
                       margin: "8px auto 0",
@@ -654,17 +854,31 @@ export default function WheelEditor() {
                         width: "74px",
                         height: "74px",
                         borderRadius: "50%",
-                        background: config.wheelCenterColor,
+                        background: showCenterLogo ? "#fff" : config.wheelCenterColor,
                         border: "4px solid #ffffff",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        overflow: "hidden",
                         color: config.wheelTextColor,
                         fontWeight: 700,
                         fontSize: "16px",
                       }}
                   >
-                    SPIN
+                    {showCenterLogo ? (
+                      <img
+                        src={config.logoImageUrl}
+                        alt="Center logo"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          padding: "8px",
+                          objectFit: "contain",
+                        }}
+                      />
+                    ) : (
+                      "SPIN"
+                    )}
                   </div>
                   </div>
 

@@ -3,6 +3,10 @@
   opacity: 1 !important;
 }
 
+.WheelEditorLayout {
+  padding-bottom: 32px;
+}
+
 .WheelEditorLayout .Polaris-Layout__Section--oneThird {
   flex: 1 1 18rem;
   position: sticky;
