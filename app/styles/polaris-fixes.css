@@ -20,6 +20,49 @@
   min-width: 0;
 }
 
+.DiscountItemRow {
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.DiscountItemDragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  color: #8a8a8a;
+}
+
+.DiscountItemDragHandle:active {
+  cursor: grabbing;
+}
+
+.DiscountItemDragHandleDots {
+  display: grid;
+  grid-template-columns: repeat(2, 4px);
+  grid-template-rows: repeat(3, 4px);
+  gap: 2px;
+}
+
+.DiscountItemDragHandleDots > span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+.DiscountItemRow--over {
+  background-color: #f6f6f7;
+}
+
+.DiscountItemRow--dragging {
+  opacity: 0.6;
+}
+
 @media (max-width: 48rem) {
   .WheelEditorLayout .Polaris-Layout__Section--oneThird {
     position: static;

@@ -516,6 +516,8 @@ export default function WheelEditor() {
   const [editingDiscountIndex, setEditingDiscountIndex] = useState(null);
   const [discountDraft, setDiscountDraft] = useState(null);
   const [savedEditorState, setSavedEditorState] = useState(null);
+  const [draggedDiscountIndex, setDraggedDiscountIndex] = useState(null);
+  const [dragOverDiscountIndex, setDragOverDiscountIndex] = useState(null);
 
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -745,6 +747,73 @@ export default function WheelEditor() {
       combineProductDiscounts: false,
       combineShippingDiscounts: false,
     });
+  };
+
+  const handleDiscountDragStart = (event, index) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(index));
+    setDraggedDiscountIndex(index);
+    setDragOverDiscountIndex(index);
+  };
+
+  const handleDiscountDragOver = (event, index) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    if (dragOverDiscountIndex !== index) {
+      setDragOverDiscountIndex(index);
+    }
+  };
+
+  const handleDiscountDrop = (event, dropIndex) => {
+    event.preventDefault();
+    const fromData = event.dataTransfer.getData("text/plain");
+    const fromIndex =
+      draggedDiscountIndex ?? (fromData ? Number.parseInt(fromData, 10) : Number.NaN);
+
+    if (!Number.isInteger(fromIndex)) {
+      setDraggedDiscountIndex(null);
+      setDragOverDiscountIndex(null);
+      return;
+    }
+
+    if (
+      fromIndex < 0 ||
+      dropIndex < 0 ||
+      fromIndex >= segments.length ||
+      dropIndex >= segments.length ||
+      fromIndex === dropIndex
+    ) {
+      setDraggedDiscountIndex(null);
+      setDragOverDiscountIndex(null);
+      return;
+    }
+
+    setSegments((prev) => {
+      const next = [...prev];
+      const [movedItem] = next.splice(fromIndex, 1);
+      next.splice(dropIndex, 0, movedItem);
+      return next;
+    });
+
+    setEditingDiscountIndex((current) => {
+      if (current === null) return null;
+      if (current === fromIndex) return dropIndex;
+      if (fromIndex < dropIndex && current > fromIndex && current <= dropIndex) {
+        return current - 1;
+      }
+      if (fromIndex > dropIndex && current >= dropIndex && current < fromIndex) {
+        return current + 1;
+      }
+      return current;
+    });
+
+    setDraggedDiscountIndex(null);
+    setDragOverDiscountIndex(null);
+  };
+
+  const handleDiscountDragEnd = () => {
+    setDraggedDiscountIndex(null);
+    setDragOverDiscountIndex(null);
   };
 
   const handleLogoFileChange = async (event) => {
@@ -1358,33 +1427,61 @@ export default function WheelEditor() {
                     segments.map((segment, index) => (
                       <div
                         key={segment.id}
+                        className={
+                          index === draggedDiscountIndex
+                            ? "DiscountItemRow DiscountItemRow--dragging"
+                            : index === dragOverDiscountIndex
+                              ? "DiscountItemRow DiscountItemRow--over"
+                              : "DiscountItemRow"
+                        }
+                        onDragOver={(event) => handleDiscountDragOver(event, index)}
+                        onDrop={(event) => handleDiscountDrop(event, index)}
                         style={{
                           padding: "16px",
                           borderTop: index === 0 ? "none" : "1px solid #e3e3e3",
                         }}
                       >
-                        <InlineStack align="space-between" blockAlign="center">
-                          <div>
-                            <Text as="p" variant="headingSm" fontWeight="semibold">
-                              {segment.label || "Untitled"}
-                            </Text>
-                            <Text as="p" tone="subdued">
-                              {`${segment.value || "Discount item"} • ${formatChance(segment.probability)}`}
-                            </Text>
+                        <InlineStack gap="300" blockAlign="center" wrap={false}>
+                          <button
+                            type="button"
+                            className="DiscountItemDragHandle"
+                            draggable
+                            onDragStart={(event) => handleDiscountDragStart(event, index)}
+                            onDragEnd={handleDiscountDragEnd}
+                            aria-label={`Drag ${segment.label || "discount item"}`}
+                          >
+                            <span className="DiscountItemDragHandleDots" aria-hidden="true">
+                              {Array.from({ length: 6 }).map((_, dotIndex) => (
+                                <span key={dotIndex} />
+                              ))}
+                            </span>
+                          </button>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <InlineStack align="space-between" blockAlign="center" wrap={false}>
+                              <div>
+                                <Text as="p" variant="headingSm" fontWeight="semibold">
+                                  {segment.label || "Untitled"}
+                                </Text>
+                                <Text as="p" tone="subdued">
+                                  {`${segment.value || "Discount item"} • ${formatChance(segment.probability)}`}
+                                </Text>
+                              </div>
+                              <InlineStack gap="200" blockAlign="center">
+                                <Button size="slim" variant="secondary" onClick={() => openDiscountEditor(index)}>
+                                  Edit
+                                </Button>
+                                <Button
+                                  size="slim"
+                                  variant="secondary"
+                                  tone="critical"
+                                  icon={DeleteIcon}
+                                  accessibilityLabel={`Delete ${segment.label || "discount item"}`}
+                                  onClick={() => handleDeleteDiscountItem(index)}
+                                />
+                              </InlineStack>
+                            </InlineStack>
                           </div>
-                          <InlineStack gap="200" blockAlign="center">
-                            <Button size="slim" variant="secondary" onClick={() => openDiscountEditor(index)}>
-                              Edit
-                            </Button>
-                            <Button
-                              size="slim"
-                              variant="secondary"
-                              tone="critical"
-                              icon={DeleteIcon}
-                              accessibilityLabel={`Delete ${segment.label || "discount item"}`}
-                              onClick={() => handleDeleteDiscountItem(index)}
-                            />
-                          </InlineStack>
                         </InlineStack>
                       </div>
                     ))
