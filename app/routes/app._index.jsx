@@ -67,6 +67,15 @@ async function checkAppEmbedEnabled(admin) {
 export const loader = async ({ request }) => {
   const { session, admin } = await authenticate.admin(request);
   const url = new URL(request.url);
+  const themeEditorUrl = new URL(`https://${session.shop}/admin/themes/current/editor`);
+  themeEditorUrl.searchParams.set("context", "apps");
+  themeEditorUrl.searchParams.set("template", "index");
+  if (process.env.SHOPIFY_API_KEY) {
+    themeEditorUrl.searchParams.set(
+      "activateAppId",
+      `${process.env.SHOPIFY_API_KEY}/lucky_wheel`,
+    );
+  }
 
   const days = parseInt(url.searchParams.get("days") || "7", 10);
   const offset = parseInt(url.searchParams.get("offset") || "0", 10);
@@ -124,6 +133,7 @@ export const loader = async ({ request }) => {
         appEnabled,
         hasCampaign: totalWheels > 0,
         hasActiveCampaign: activeWheels > 0,
+        enableUrl: themeEditorUrl.toString(),
       },
     });
   } catch (error) {
@@ -136,7 +146,12 @@ export const loader = async ({ request }) => {
       days,
       offset,
       dateRangeLabel,
-      setup: { appEnabled: false, hasCampaign: false, hasActiveCampaign: false },
+      setup: {
+        appEnabled: false,
+        hasCampaign: false,
+        hasActiveCampaign: false,
+        enableUrl: themeEditorUrl.toString(),
+      },
     });
   }
 };
@@ -478,7 +493,7 @@ function SetupGuide({ setup }) {
       title: "Enable the app",
       description: "Enable the app to start using the spin wheel popup.",
       completed: setup.appEnabled,
-      action: { label: "Enable", url: null },
+      action: { label: "Enable", url: setup.enableUrl },
       secondaryAction: { label: "Refresh", url: "." },
     },
     {
@@ -552,6 +567,8 @@ function SetupGuide({ setup }) {
 }
 
 function SetupStep({ step, isActive, onToggle }) {
+  const isExternal = (url) => typeof url === "string" && /^https?:\/\//.test(url);
+
   return (
     <div style={{ borderTop: "1px solid #f1f1f1" }}>
       <div
@@ -601,16 +618,28 @@ function SetupStep({ step, isActive, onToggle }) {
               </Text>
               <InlineStack gap="300" blockAlign="center">
                 {step.action.url ? (
-                  <Link to={step.action.url} style={{ textDecoration: "none" }}>
-                    <Button variant="primary">{step.action.label}</Button>
-                  </Link>
+                  isExternal(step.action.url) ? (
+                    <Button variant="primary" url={step.action.url} target="_top">
+                      {step.action.label}
+                    </Button>
+                  ) : (
+                    <Link to={step.action.url} style={{ textDecoration: "none" }}>
+                      <Button variant="primary">{step.action.label}</Button>
+                    </Link>
+                  )
                 ) : (
                   <Button variant="primary">{step.action.label}</Button>
                 )}
                 {step.secondaryAction && (
-                  <Link to={step.secondaryAction.url} style={{ textDecoration: "none" }}>
-                    <Button variant="plain">{step.secondaryAction.label}</Button>
-                  </Link>
+                  isExternal(step.secondaryAction.url) ? (
+                    <Button variant="plain" url={step.secondaryAction.url} target="_top">
+                      {step.secondaryAction.label}
+                    </Button>
+                  ) : (
+                    <Link to={step.secondaryAction.url} style={{ textDecoration: "none" }}>
+                      <Button variant="plain">{step.secondaryAction.label}</Button>
+                    </Link>
+                  )
                 )}
               </InlineStack>
             </BlockStack>
