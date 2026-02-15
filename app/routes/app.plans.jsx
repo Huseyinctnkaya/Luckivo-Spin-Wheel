@@ -29,7 +29,7 @@ const PREMIUM_FEATURES = [
 
 export default function PlansPage() {
   const { currentPlan } = useLoaderData();
-  const [billingPeriod, setBillingPeriod] = useState("monthly");
+  const [billingPeriod, setBillingPeriod] = useState("annual");
 
   const premiumPricing = useMemo(() => {
     if (billingPeriod === "annual") {
@@ -45,9 +45,10 @@ export default function PlansPage() {
           <div
             style={{
               display: "inline-flex",
-              border: "1px solid #c9cccf",
+              border: "1px solid #c5c7cc",
               borderRadius: "10px",
               overflow: "hidden",
+              background: "#f6f6f7",
             }}
           >
             <button
@@ -55,11 +56,13 @@ export default function PlansPage() {
               onClick={() => setBillingPeriod("monthly")}
               style={{
                 border: "none",
-                background: billingPeriod === "monthly" ? "#303030" : "#ffffff",
+                background: billingPeriod === "monthly" ? "#2f3136" : "transparent",
                 color: billingPeriod === "monthly" ? "#ffffff" : "#303030",
                 padding: "8px 14px",
                 fontWeight: 600,
                 cursor: "pointer",
+                boxShadow:
+                  billingPeriod === "monthly" ? "inset 0 0 0 1px #2f6dfc" : "none",
               }}
             >
               Monthly
@@ -70,11 +73,13 @@ export default function PlansPage() {
               style={{
                 border: "none",
                 borderLeft: "1px solid #c9cccf",
-                background: billingPeriod === "annual" ? "#303030" : "#ffffff",
+                background: billingPeriod === "annual" ? "#2f3136" : "transparent",
                 color: billingPeriod === "annual" ? "#ffffff" : "#303030",
                 padding: "8px 14px",
                 fontWeight: 600,
                 cursor: "pointer",
+                boxShadow:
+                  billingPeriod === "annual" ? "inset 0 0 0 1px #2f6dfc" : "none",
               }}
             >
               Annual
@@ -157,7 +162,7 @@ function PlanCard({
 
         <InlineStack gap="100" blockAlign="end">
           <Text as="p" variant="heading2xl" fontWeight="bold">
-            <span style={{ color: "#5c3bfe" }}>{amount}</span>
+            <span style={{ color: "#5a3df5" }}>{amount}</span>
           </Text>
           <Text as="p" tone="subdued">
             {suffix}
