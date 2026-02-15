@@ -4,9 +4,16 @@
 }
 
 .WheelEditorLayout .Polaris-Layout__Section--oneThird {
+  flex: 1 1 18rem;
   position: sticky;
   top: 16px;
   align-self: flex-start;
+}
+
+.WheelEditorLayout
+  .Polaris-Layout__Section:not(.Polaris-Layout__Section--oneThird):not(.Polaris-Layout__Section--fullWidth) {
+  flex: 1 1 27rem;
+  min-width: 0;
 }
 
 @media (max-width: 48rem) {

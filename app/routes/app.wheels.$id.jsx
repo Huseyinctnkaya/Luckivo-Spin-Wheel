@@ -337,7 +337,7 @@ export default function WheelEditor() {
       <div className="WheelEditorLayout">
         <Layout>
         {totalProbability !== 100 && (
-          <Layout.Section>
+          <Layout.Section variant="fullWidth">
             <Banner tone="warning">
               Total probability is {totalProbability}%. It should ideally be 100%.
             </Banner>
