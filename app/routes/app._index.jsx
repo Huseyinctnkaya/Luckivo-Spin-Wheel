@@ -48,57 +48,68 @@ export const loader = async ({ request }) => {
 export default function Index() {
   const { totalImpressions, totalSpins, conversionRate } = useLoaderData();
 
+  const titleStyle = {
+    borderBottom: '1px dotted #8c9196',
+    cursor: 'help'
+  };
+
   return (
     <Page title="Lucky Wheel Dashboard">
       <BlockStack gap="500">
-        {/* Native Polaris Stats Bar */}
-        <Card padding="0">
+
+        {/* Pixel-Perfect Stats Bar (Reference: User-provided image) */}
+        <Box
+          background="bg-surface"
+          borderWidth="025"
+          borderColor="border"
+          borderRadius="300"
+          overflow="hidden"
+        >
           <InlineStack gap="0" align="stretch" wrap={false}>
-            {/* Date Range Selector */}
-            <Box padding="400" borderRightWidth="025" borderColor="border-subdued" minWidth="140px">
-              <InlineStack gap="200" blockAlign="center">
+            {/* Date Picker Section */}
+            <Box padding="400" borderInlineEndWidth="025" borderColor="border-subdued" minWidth="140px">
+              <InlineStack gap="200" align="center" blockAlign="center">
                 <Icon source={CalendarIcon} tone="base" />
                 <Text variant="bodyMd" fontWeight="semibold">7 days</Text>
               </InlineStack>
             </Box>
 
-            {/* Popups Displayed (Active/Selected State) */}
+            {/* Popups Displayed - Highlighted State */}
             <Box
-              padding="200"
-              borderRightWidth="025"
+              background="bg-surface-secondary"
+              padding="400"
+              borderInlineEndWidth="025"
               borderColor="border-subdued"
               flex="1"
-              minWidth="200px"
+              minWidth="220px"
             >
-              <Box
-                padding="300"
-                background="bg-surface-secondary"
-                borderRadius="200"
-              >
-                <BlockStack gap="100">
-                  <Text variant="bodySm" fontWeight="bold" color="subdued">
-                    Popups Displayed
+              <BlockStack gap="100">
+                <Box>
+                  <Text variant="bodySm" fontWeight="semibold" color="subdued">
+                    <span style={titleStyle}>Popups Displayed</span>
                   </Text>
-                  <Text variant="headingLg" as="p" color="success">
-                    {totalImpressions}
-                  </Text>
-                </BlockStack>
-              </Box>
+                </Box>
+                <Text variant="headingLg" as="p" fontWeight="bold" color="success">
+                  {totalImpressions}
+                </Text>
+              </BlockStack>
             </Box>
 
             {/* Forms Submitted */}
             <Box
-              padding="500"
-              borderRightWidth="025"
+              padding="400"
+              borderInlineEndWidth="025"
               borderColor="border-subdued"
               flex="1"
-              minWidth="180px"
+              minWidth="200px"
             >
               <BlockStack gap="100">
-                <Text variant="bodySm" fontWeight="bold" color="subdued">
-                  Forms Submitted
-                </Text>
-                <Text variant="headingLg" as="p" color="success">
+                <Box>
+                  <Text variant="bodySm" fontWeight="semibold" color="subdued">
+                    <span style={titleStyle}>Forms Submitted</span>
+                  </Text>
+                </Box>
+                <Text variant="headingLg" as="p" fontWeight="bold" color="success">
                   {totalSpins}
                 </Text>
               </BlockStack>
@@ -106,43 +117,54 @@ export default function Index() {
 
             {/* Emails Collected */}
             <Box
-              padding="500"
-              borderRightWidth="025"
+              padding="400"
+              borderInlineEndWidth="025"
               borderColor="border-subdued"
               flex="1"
-              minWidth="180px"
+              minWidth="200px"
             >
               <BlockStack gap="100">
-                <Text variant="bodySm" fontWeight="bold" color="subdued">
-                  Emails Collected
-                </Text>
-                <Text variant="headingLg" as="p" color="success">
+                <Box>
+                  <Text variant="bodySm" fontWeight="semibold" color="subdued">
+                    <span style={titleStyle}>Emails Collected</span>
+                  </Text>
+                </Box>
+                <Text variant="headingLg" as="p" fontWeight="bold" color="success">
                   {totalSpins}
                 </Text>
               </BlockStack>
             </Box>
 
-            {/* Conversions with Arrows */}
+            {/* Conversions Wrapper */}
             <Box
-              padding="500"
+              padding="400"
               flex="1"
               minWidth="220px"
             >
               <InlineStack align="space-between" blockAlign="center">
                 <BlockStack gap="100">
-                  <Text variant="bodySm" fontWeight="bold" color="subdued">
-                    Conversions
-                  </Text>
-                  <Text variant="headingLg" as="p" color="success">
+                  <Box>
+                    <Text variant="bodySm" fontWeight="semibold" color="subdued">
+                      <span style={titleStyle}>Conversions</span>
+                    </Text>
+                  </Box>
+                  <Text variant="headingLg" as="p" fontWeight="bold" color="success">
                     {conversionRate}%
                   </Text>
                 </BlockStack>
-                <Box paddingInlineStart="400">
-                  <InlineStack gap="100">
-                    <Box borderWidth="025" borderColor="border-subdued" borderRadius="100" padding="050">
+
+                {/* Arrow Navigation */}
+                <Box
+                  borderWidth="025"
+                  borderColor="border-subdued"
+                  borderRadius="200"
+                  overflow="hidden"
+                >
+                  <InlineStack gap="0">
+                    <Box padding="100" borderInlineEndWidth="025" borderColor="border-subdued">
                       <Icon source={ChevronLeftIcon} tone="base" />
                     </Box>
-                    <Box borderWidth="025" borderColor="border-subdued" borderRadius="100" padding="050">
+                    <Box padding="100">
                       <Icon source={ChevronRightIcon} tone="base" />
                     </Box>
                   </InlineStack>
@@ -150,7 +172,7 @@ export default function Index() {
               </InlineStack>
             </Box>
           </InlineStack>
-        </Card>
+        </Box>
 
         {/* Action Cards */}
         <Layout>
@@ -161,7 +183,7 @@ export default function Index() {
                 <Text variant="bodyMd" as="p">
                   Your lucky wheel is ready to collect emails and boost conversions.
                 </Text>
-                <InlineStack gap="400">
+                <InlineStack gap="300">
                   <Button variant="primary" url="/app/wheels">Manage Your Wheels</Button>
                   <Button url="/app/wheels/new">Create a New Wheel</Button>
                 </InlineStack>
