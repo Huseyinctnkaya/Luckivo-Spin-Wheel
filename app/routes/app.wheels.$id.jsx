@@ -15,7 +15,9 @@ import {
   Box,
   InlineStack,
   Select,
+  Checkbox,
   Icon,
+  Modal,
   Popover,
   ColorPicker,
   hsbToHex,
@@ -25,8 +27,10 @@ import {
 import {
   ChevronDownIcon,
   ChevronUpIcon,
+  DeleteIcon,
   DesktopIcon,
   MobileIcon,
+  PlusIcon,
 } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
@@ -54,6 +58,13 @@ const PREVIEW_TABS = [
   { label: "Result", value: "result" },
   { label: "Side button", value: "side_button" },
   { label: "Countdown", value: "countdown" },
+];
+
+const DISCOUNT_TYPE_OPTIONS = [
+  { label: "Percentage", value: "percentage" },
+  { label: "Fixed amount", value: "fixed_amount" },
+  { label: "Free shipping", value: "free_shipping" },
+  { label: "No discount", value: "no_discount" },
 ];
 
 const LOGO_POSITION_OPTIONS = [
@@ -124,6 +135,48 @@ function readFileAsDataUrl(file) {
     reader.onerror = () => reject(new Error("Image could not be read"));
     reader.readAsDataURL(file);
   });
+}
+
+function createSegmentId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `segment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function formatChance(probability) {
+  const value = Number(probability);
+  if (!Number.isFinite(value)) return "~0% chance";
+  const safe = Math.max(0, value);
+  const rounded = Number.isInteger(safe) ? safe.toFixed(0) : safe.toFixed(1);
+  return `~${rounded}% chance`;
+}
+
+function buildDiscountDescription({
+  discountType,
+  discountAmount,
+  minimumPurchase,
+}) {
+  if (discountType === "free_shipping") return "Free shipping";
+  if (discountType === "no_discount") return "No discount";
+
+  const amount = String(discountAmount || "0").trim() || "0";
+  const minPurchase = String(minimumPurchase || "0").trim();
+  const hasMin = Number(minPurchase) > 0;
+
+  if (discountType === "fixed_amount") {
+    return hasMin
+      ? `$${amount} off (min. $${minPurchase})`
+      : `$${amount} off`;
+  }
+
+  return `${amount}% discount`;
+}
+
+function formatPercentValue(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return "0%";
+  return Number.isInteger(parsed) ? `${parsed}%` : `${parsed.toFixed(2)}%`;
 }
 
 function ColorField({ label, value, onChange, fallback = "#000000" }) {
@@ -256,6 +309,7 @@ export default function WheelEditor() {
   const [previewTab, setPreviewTab] = useState("initial");
   const [previewDevice, setPreviewDevice] = useState("mobile");
   const [colorsOpen, setColorsOpen] = useState(true);
+  const [discountsOpen, setDiscountsOpen] = useState(true);
   const [segmentTextColors, setSegmentTextColors] = useState(
     parsedConfig.segmentTextColors || {},
   );
@@ -292,12 +346,15 @@ export default function WheelEditor() {
     ),
     logoImageUrl: parsedConfig.logoImageUrl || "",
     backgroundImageUrl: parsedConfig.backgroundImageUrl || "",
+    discountSettings: parsedConfig.discountSettings || {},
     logoPosition: getValidOptionValue(
       LOGO_POSITION_OPTIONS,
       parsedConfig.logoPosition,
       "center_of_wheel",
     ),
   });
+  const [editingDiscountIndex, setEditingDiscountIndex] = useState(null);
+  const [discountDraft, setDiscountDraft] = useState(null);
 
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -311,6 +368,30 @@ export default function WheelEditor() {
   );
 
   const wheelGradient = useMemo(() => buildWheelGradient(segments), [segments]);
+  const wheelSliceLabels = useMemo(() => {
+    if (!segments.length) return [];
+
+    const total = segments.reduce((sum, segment) => {
+      const probability = Number(segment.probability || 0);
+      return sum + (Number.isFinite(probability) ? probability : 0);
+    }, 0);
+
+    let cursor = 0;
+    return segments.map((segment) => {
+      const probability = Number(segment.probability || 0);
+      const ratio = total > 0 ? probability / total : 1 / segments.length;
+      const sweep = ratio * 360;
+      const midAngle = cursor + sweep / 2;
+      cursor += sweep;
+
+      return {
+        id: segment.id,
+        label: String(segment.label || "").trim(),
+        angle: midAngle,
+        color: segmentTextColors[segment.id] || config.wheelTextColor,
+      };
+    });
+  }, [segments, segmentTextColors, config.wheelTextColor]);
 
   const handleConfigChange = (field, value) => {
     setConfig((prev) => ({ ...prev, [field]: value }));
@@ -333,6 +414,158 @@ export default function WheelEditor() {
       ...prev,
       [segmentId]: normalizeHex(value, "#4a1e00"),
     }));
+  };
+
+  const openDiscountEditor = (index) => {
+    const target = segments[index];
+    if (!target) return;
+    const savedSettings = config.discountSettings?.[target.id] || {};
+
+    setEditingDiscountIndex(index);
+    setDiscountDraft({
+      displayTitle: target.label || "",
+      discountType: getValidOptionValue(
+        DISCOUNT_TYPE_OPTIONS,
+        savedSettings.discountType,
+        "percentage",
+      ),
+      discountAmount: String(savedSettings.discountAmount ?? "10"),
+      minimumPurchase: String(savedSettings.minimumPurchase ?? "0"),
+      probabilityWeight: String(target.probability ?? 0),
+      limitPrizeWins: Boolean(savedSettings.limitPrizeWins),
+      maximumWinners: String(savedSettings.maximumWinners ?? "10"),
+      currentWinners: String(savedSettings.currentWinners ?? "0"),
+      customWinScreen: Boolean(savedSettings.customWinScreen),
+      combineOrderDiscounts: Boolean(savedSettings.combineOrderDiscounts),
+      combineProductDiscounts: Boolean(savedSettings.combineProductDiscounts),
+      combineShippingDiscounts: Boolean(savedSettings.combineShippingDiscounts),
+    });
+  };
+
+  const closeDiscountEditor = () => {
+    setEditingDiscountIndex(null);
+    setDiscountDraft(null);
+  };
+
+  const handleDiscountDraftChange = (field, value) => {
+    setDiscountDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const handleResetCurrentWinners = () => {
+    setDiscountDraft((prev) => (prev ? { ...prev, currentWinners: "0" } : prev));
+  };
+
+  const handleSaveDiscountItem = () => {
+    if (editingDiscountIndex === null || !discountDraft) return;
+
+    const targetId = segments[editingDiscountIndex]?.id;
+    const description = buildDiscountDescription(discountDraft);
+    setSegments((prev) =>
+      prev.map((segment, index) =>
+        index === editingDiscountIndex
+          ? {
+              ...segment,
+              label: discountDraft.displayTitle.trim() || "New item",
+              value: description,
+              probability: parseFloat(discountDraft.probabilityWeight || 0) || 0,
+            }
+          : segment,
+      ),
+    );
+
+    if (targetId) {
+      setConfig((current) => ({
+        ...current,
+        discountSettings: {
+          ...(current.discountSettings || {}),
+          [targetId]: {
+            discountType: discountDraft.discountType,
+            discountAmount: discountDraft.discountAmount,
+            minimumPurchase: discountDraft.minimumPurchase,
+            limitPrizeWins: discountDraft.limitPrizeWins,
+            maximumWinners: discountDraft.maximumWinners,
+            currentWinners: discountDraft.currentWinners,
+            customWinScreen: discountDraft.customWinScreen,
+            combineOrderDiscounts: discountDraft.combineOrderDiscounts,
+            combineProductDiscounts: discountDraft.combineProductDiscounts,
+            combineShippingDiscounts: discountDraft.combineShippingDiscounts,
+          },
+        },
+      }));
+    }
+
+    closeDiscountEditor();
+  };
+
+  const handleDeleteDiscountItem = (index) => {
+    const target = segments[index];
+    if (!target) return;
+
+    setSegments((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    setSegmentTextColors((prev) => {
+      const next = { ...prev };
+      delete next[target.id];
+      return next;
+    });
+    setConfig((prev) => {
+      const nextDiscountSettings = { ...(prev.discountSettings || {}) };
+      delete nextDiscountSettings[target.id];
+      return { ...prev, discountSettings: nextDiscountSettings };
+    });
+
+    if (editingDiscountIndex === index) {
+      closeDiscountEditor();
+    }
+  };
+
+  const handleAddDiscountItem = () => {
+    const newSegment = {
+      id: createSegmentId(),
+      label: "New item",
+      value: "Discount item",
+      probability: 0,
+      color: "#f6b347",
+    };
+
+    setSegments((prev) => [...prev, newSegment]);
+    setSegmentTextColors((prev) => ({
+      ...prev,
+      [newSegment.id]: config.wheelTextColor,
+    }));
+
+    setEditingDiscountIndex(segments.length);
+    setConfig((prev) => ({
+      ...prev,
+      discountSettings: {
+        ...(prev.discountSettings || {}),
+        [newSegment.id]: {
+          discountType: "percentage",
+          discountAmount: "10",
+          minimumPurchase: "0",
+          limitPrizeWins: false,
+          maximumWinners: "10",
+          currentWinners: "0",
+          customWinScreen: false,
+          combineOrderDiscounts: false,
+          combineProductDiscounts: false,
+          combineShippingDiscounts: false,
+        },
+      },
+    }));
+    setDiscountDraft({
+      displayTitle: newSegment.label,
+      discountType: "percentage",
+      discountAmount: "10",
+      minimumPurchase: "0",
+      probabilityWeight: "0",
+      limitPrizeWins: false,
+      maximumWinners: "10",
+      currentWinners: "0",
+      customWinScreen: false,
+      combineOrderDiscounts: false,
+      combineProductDiscounts: false,
+      combineShippingDiscounts: false,
+    });
   };
 
   const handleLogoFileChange = async (event) => {
@@ -369,6 +602,24 @@ export default function WheelEditor() {
   const showTopLogo =
     Boolean(config.logoImageUrl) &&
     (config.logoPosition === "top_of_popup" || config.logoPosition === "both");
+
+  const handleApplyCombinesToAll = () => {
+    if (!discountDraft) return;
+
+    setConfig((prev) => {
+      const nextDiscountSettings = { ...(prev.discountSettings || {}) };
+      segments.forEach((segment) => {
+        const existing = nextDiscountSettings[segment.id] || {};
+        nextDiscountSettings[segment.id] = {
+          ...existing,
+          combineOrderDiscounts: discountDraft.combineOrderDiscounts,
+          combineProductDiscounts: discountDraft.combineProductDiscounts,
+          combineShippingDiscounts: discountDraft.combineShippingDiscounts,
+        };
+      });
+      return { ...prev, discountSettings: nextDiscountSettings };
+    });
+  };
 
   const handleSave = () => {
     submit(
@@ -662,6 +913,96 @@ export default function WheelEditor() {
               </div>
             </Card>
 
+            <Card padding="0">
+              <Box padding="400">
+                <InlineStack align="space-between" blockAlign="center">
+                  <div>
+                    <Text variant="headingMd" as="h2" fontWeight="bold">
+                      Discounts Settings
+                    </Text>
+                    <Text as="p" tone="subdued">
+                      Adjust the discounts settings
+                    </Text>
+                  </div>
+                  <Button
+                    variant="plain"
+                    icon={discountsOpen ? ChevronUpIcon : ChevronDownIcon}
+                    onClick={() => setDiscountsOpen((open) => !open)}
+                    accessibilityLabel="Toggle discounts section"
+                  />
+                </InlineStack>
+              </Box>
+
+              <div
+                style={{
+                  maxHeight: discountsOpen ? "1800px" : "0px",
+                  overflow: discountsOpen ? "visible" : "hidden",
+                  opacity: discountsOpen ? 1 : 0,
+                  transitionDuration: "500ms",
+                  transitionTimingFunction: "ease-in-out",
+                  transitionProperty: "max-height, opacity",
+                  pointerEvents: discountsOpen ? "auto" : "none",
+                }}
+              >
+                <div
+                  style={{
+                    borderTop: "1px solid #e3e3e3",
+                    borderBottom: "1px solid #e3e3e3",
+                  }}
+                >
+                  {segments.length === 0 ? (
+                    <Box padding="400">
+                      <Text as="p" tone="subdued">
+                        No discount item yet.
+                      </Text>
+                    </Box>
+                  ) : (
+                    segments.map((segment, index) => (
+                      <div
+                        key={segment.id}
+                        style={{
+                          padding: "16px",
+                          borderTop: index === 0 ? "none" : "1px solid #e3e3e3",
+                        }}
+                      >
+                        <InlineStack align="space-between" blockAlign="center">
+                          <div>
+                            <Text as="p" variant="headingSm" fontWeight="semibold">
+                              {segment.label || "Untitled"}
+                            </Text>
+                            <Text as="p" tone="subdued">
+                              {`${segment.value || "Discount item"} • ${formatChance(segment.probability)}`}
+                            </Text>
+                          </div>
+                          <InlineStack gap="200" blockAlign="center">
+                            <Button size="slim" variant="secondary" onClick={() => openDiscountEditor(index)}>
+                              Edit
+                            </Button>
+                            <Button
+                              size="slim"
+                              variant="secondary"
+                              tone="critical"
+                              icon={DeleteIcon}
+                              accessibilityLabel={`Delete ${segment.label || "discount item"}`}
+                              onClick={() => handleDeleteDiscountItem(index)}
+                            />
+                          </InlineStack>
+                        </InlineStack>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <Box padding="400">
+                  <InlineStack align="center">
+                    <Button icon={PlusIcon} onClick={handleAddDiscountItem}>
+                      Add Discount Item
+                    </Button>
+                  </InlineStack>
+                </Box>
+              </div>
+            </Card>
+
             <Card>
               <InlineStack gap="300">
                 <Button variant="primary" onClick={handleSave} loading={isSaving}>
@@ -832,6 +1173,38 @@ export default function WheelEditor() {
                       position: "relative",
                     }}
                   >
+                    {wheelSliceLabels.map((slice) => {
+                      if (!slice.label) return null;
+                      const theta = (slice.angle * Math.PI) / 180;
+                      const radiusPercent = previewDevice === "mobile" ? 33 : 35;
+                      const x = 50 + radiusPercent * Math.sin(theta);
+                      const y = 50 - radiusPercent * Math.cos(theta);
+                      const shortLabel =
+                        slice.label.length > 14 ? `${slice.label.slice(0, 14)}...` : slice.label;
+
+                      return (
+                        <div
+                          key={slice.id}
+                          style={{
+                            position: "absolute",
+                            left: `${x}%`,
+                            top: `${y}%`,
+                            transform: "translate(-50%, -50%)",
+                            color: slice.color,
+                            fontWeight: 700,
+                            fontSize: previewDevice === "mobile" ? "10px" : "11px",
+                            lineHeight: 1.1,
+                            textAlign: "center",
+                            width: previewDevice === "mobile" ? "58px" : "68px",
+                            pointerEvents: "none",
+                            textShadow: "0 1px 0 rgba(255,255,255,0.45)",
+                          }}
+                        >
+                          {shortLabel}
+                        </div>
+                      );
+                    })}
+
                     <div
                       style={{
                         position: "absolute",
@@ -940,6 +1313,157 @@ export default function WheelEditor() {
         </Layout.Section>
         </Layout>
       </div>
+
+      <Modal
+        open={editingDiscountIndex !== null && Boolean(discountDraft)}
+        onClose={closeDiscountEditor}
+        title={`Edit Discount ${(editingDiscountIndex ?? 0) + 1}`}
+        primaryAction={{
+          content: "Done",
+          onAction: handleSaveDiscountItem,
+        }}
+      >
+        <Modal.Section>
+          {discountDraft ? (
+            <BlockStack gap="300">
+              <TextField
+                label="Display Title"
+                value={discountDraft.displayTitle}
+                onChange={(value) => handleDiscountDraftChange("displayTitle", value)}
+                autoComplete="off"
+              />
+
+              <InlineGrid columns={2} gap="300">
+                <Select
+                  label="Discount Type"
+                  options={DISCOUNT_TYPE_OPTIONS}
+                  value={discountDraft.discountType}
+                  onChange={(value) => handleDiscountDraftChange("discountType", value)}
+                />
+                <TextField
+                  type="number"
+                  label="Discount Amount"
+                  value={discountDraft.discountAmount}
+                  suffix={discountDraft.discountType === "percentage" ? "%" : undefined}
+                  prefix={discountDraft.discountType === "fixed_amount" ? "$" : undefined}
+                  disabled={
+                    discountDraft.discountType === "free_shipping" ||
+                    discountDraft.discountType === "no_discount"
+                  }
+                  onChange={(value) => handleDiscountDraftChange("discountAmount", value)}
+                  autoComplete="off"
+                />
+              </InlineGrid>
+
+              <InlineGrid columns={2} gap="300">
+                <TextField
+                  type="number"
+                  label="Minimum Purchase"
+                  prefix="$"
+                  value={discountDraft.minimumPurchase}
+                  onChange={(value) => handleDiscountDraftChange("minimumPurchase", value)}
+                  autoComplete="off"
+                />
+                <TextField
+                  type="number"
+                  label="Probability Weight"
+                  value={discountDraft.probabilityWeight}
+                  onChange={(value) => handleDiscountDraftChange("probabilityWeight", value)}
+                  autoComplete="off"
+                />
+              </InlineGrid>
+
+              <Checkbox
+                label="Limit number of times this prize can be won"
+                checked={discountDraft.limitPrizeWins}
+                onChange={(checked) => handleDiscountDraftChange("limitPrizeWins", checked)}
+              />
+
+              {discountDraft.limitPrizeWins ? (
+                <BlockStack gap="200">
+                  <TextField
+                    type="number"
+                    label="Maximum Winners"
+                    value={discountDraft.maximumWinners}
+                    onChange={(value) => handleDiscountDraftChange("maximumWinners", value)}
+                    autoComplete="off"
+                    placeholder="e.g. 10"
+                  />
+                  <Text as="p" tone="subdued">
+                    The total number of times this prize can be won across all users.
+                  </Text>
+                  <InlineStack gap="300" blockAlign="center">
+                    <Text as="p" tone="subdued">
+                      {`Current winners: ${discountDraft.currentWinners || "0"}`}
+                    </Text>
+                    <Button variant="plain" tone="critical" onClick={handleResetCurrentWinners}>
+                      Reset
+                    </Button>
+                  </InlineStack>
+                </BlockStack>
+              ) : null}
+
+              <Box
+                background="bg-surface-info"
+                borderRadius="200"
+                padding="300"
+                borderColor="border"
+              >
+                <Text as="p" tone="info">
+                  {`Approximately ${formatPercentValue(discountDraft.probabilityWeight)} chance of winning`}
+                </Text>
+              </Box>
+
+              <BlockStack gap="100">
+                <Checkbox
+                  label="Use custom win screen for this discount"
+                  checked={discountDraft.customWinScreen}
+                  onChange={(checked) => handleDiscountDraftChange("customWinScreen", checked)}
+                />
+                <Box paddingInlineStart="500">
+                  <Text as="p" tone="subdued">
+                    When enabled, shoppers will see a custom win screen after winning this prize.
+                  </Text>
+                </Box>
+              </BlockStack>
+
+              <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
+                <InlineStack align="space-between" blockAlign="center">
+                  <div>
+                    <Text as="h4" variant="headingSm" fontWeight="semibold">
+                      Combines With
+                    </Text>
+                    <Text as="p" tone="subdued">
+                      Choose which discount types this discount can be combined with.
+                    </Text>
+                  </div>
+                  <Button variant="plain" onClick={handleApplyCombinesToAll}>
+                    Apply to all items
+                  </Button>
+                </InlineStack>
+              </Box>
+
+              <InlineStack gap="400">
+                <Checkbox
+                  label="Order discounts"
+                  checked={discountDraft.combineOrderDiscounts}
+                  onChange={(checked) => handleDiscountDraftChange("combineOrderDiscounts", checked)}
+                />
+                <Checkbox
+                  label="Product discounts"
+                  checked={discountDraft.combineProductDiscounts}
+                  onChange={(checked) => handleDiscountDraftChange("combineProductDiscounts", checked)}
+                />
+                <Checkbox
+                  label="Shipping discounts"
+                  checked={discountDraft.combineShippingDiscounts}
+                  onChange={(checked) => handleDiscountDraftChange("combineShippingDiscounts", checked)}
+                />
+              </InlineStack>
+            </BlockStack>
+          ) : null}
+        </Modal.Section>
+      </Modal>
     </Page>
   );
 }
