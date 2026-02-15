@@ -1,6 +1,6 @@
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-import { useMemo, useState } from "react";
+import { useLoaderData, useSearchParams } from "@remix-run/react";
+import { useMemo } from "react";
 import { authenticate } from "../shopify.server";
 import { Page, Card, Text, BlockStack, InlineStack, Button } from "@shopify/polaris";
 
@@ -29,7 +29,14 @@ const PREMIUM_FEATURES = [
 
 export default function PlansPage() {
   const { currentPlan } = useLoaderData();
-  const [billingPeriod, setBillingPeriod] = useState("annual");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const billingPeriod = searchParams.get("billing") === "monthly" ? "monthly" : "annual";
+
+  const setBillingPeriod = (period) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("billing", period);
+    setSearchParams(params, { replace: true });
+  };
 
   const premiumPricing = useMemo(() => {
     if (billingPeriod === "annual") {
@@ -82,7 +89,7 @@ export default function PlansPage() {
                   billingPeriod === "annual" ? "inset 0 0 0 1px #2f6dfc" : "none",
               }}
             >
-              Annual
+              Yearly
             </button>
           </div>
         </InlineStack>
@@ -99,6 +106,7 @@ export default function PlansPage() {
             subtitle="Perfect to get started."
             amount="$0"
             suffix="/month"
+            priceColor="#111111"
             features={FREE_FEATURES}
             selected={currentPlan === "free"}
             ctaLabel="Selected"
@@ -109,6 +117,7 @@ export default function PlansPage() {
             subtitle="For stores that want full growth tools."
             amount={premiumPricing.amount}
             suffix={premiumPricing.suffix}
+            priceColor="#111111"
             note={premiumPricing.note}
             features={PREMIUM_FEATURES}
             selected={currentPlan === "premium"}
@@ -125,6 +134,7 @@ function PlanCard({
   subtitle,
   amount,
   suffix,
+  priceColor,
   note,
   features,
   selected,
@@ -162,7 +172,7 @@ function PlanCard({
 
         <InlineStack gap="100" blockAlign="end">
           <Text as="p" variant="heading2xl" fontWeight="bold">
-            <span style={{ color: "#5a3df5" }}>{amount}</span>
+            <span style={{ color: priceColor }}>{amount}</span>
           </Text>
           <Text as="p" tone="subdued">
             {suffix}
