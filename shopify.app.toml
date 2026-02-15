@@ -2,7 +2,7 @@
 
 client_id = "7dab8c453f7b44b3c15da2b89b004213"
 name = "wheel-app-craft"
-application_url = "https://autos-rod-coleman-movie.trycloudflare.com"
+application_url = "https://territories-navigator-restricted-darwin.trycloudflare.com"
 embedded = true
 
 [build]
@@ -24,9 +24,9 @@ api_version = "2026-04"
 scopes = "write_products,read_discounts,write_discounts"
 
 [auth]
-redirect_urls = [ "https://autos-rod-coleman-movie.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://territories-navigator-restricted-darwin.trycloudflare.com/api/auth" ]
 
 [app_proxy]
-url = "https://autos-rod-coleman-movie.trycloudflare.com/app/proxy"
+url = "https://territories-navigator-restricted-darwin.trycloudflare.com/app/proxy"
 subpath = "wheel-proxy"
 prefix = "apps"

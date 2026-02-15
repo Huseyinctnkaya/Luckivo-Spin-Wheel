@@ -74,3 +74,9 @@ model Impression {
   shop        String
   createdAt   DateTime @default(now())
 }
+
+model CustomCode {
+  id   String @id @default(uuid())
+  shop String @unique
+  code String @default("")
+}
