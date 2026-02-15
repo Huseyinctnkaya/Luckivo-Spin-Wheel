@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import { useLoaderData, useSearchParams } from "@remix-run/react";
+import { useLoaderData, useNavigate } from "@remix-run/react";
 import {
   Page,
   Card,
@@ -10,10 +10,74 @@ import {
   EmptyState,
   InlineStack,
   Box,
+  Modal,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+
+const TEMPLATES = [
+  {
+    id: "default",
+    name: "Default",
+    image: null,
+    config: { primaryColor: "#FF6B35", style: "default" },
+    segments: [
+      { label: "10% OFF", value: "SAVE10", probability: 25, color: "#FF5733" },
+      { label: "Better Luck", value: "NONE", probability: 40, color: "#C0C0C0" },
+      { label: "20% OFF", value: "SAVE20", probability: 15, color: "#33FF57" },
+      { label: "Free Shipping", value: "FREESHIP", probability: 20, color: "#3357FF" },
+    ],
+  },
+  {
+    id: "valentine-romance",
+    name: "Valentine Romance",
+    image: null,
+    config: { primaryColor: "#E91E63", style: "valentine-romance" },
+    segments: [
+      { label: "15% OFF", value: "LOVE15", probability: 25, color: "#E91E63" },
+      { label: "Try Again", value: "NONE", probability: 35, color: "#F8BBD0" },
+      { label: "25% OFF", value: "LOVE25", probability: 15, color: "#C2185B" },
+      { label: "Free Gift", value: "FREEGIFT", probability: 25, color: "#FF4081" },
+    ],
+  },
+  {
+    id: "valentine-sweet",
+    name: "Valentine Sweet",
+    image: null,
+    config: { primaryColor: "#FF80AB", style: "valentine-sweet" },
+    segments: [
+      { label: "10% OFF", value: "SWEET10", probability: 30, color: "#FF80AB" },
+      { label: "Better Luck", value: "NONE", probability: 35, color: "#FCE4EC" },
+      { label: "20% OFF", value: "SWEET20", probability: 15, color: "#F50057" },
+      { label: "Free Shipping", value: "SWEETSHIP", probability: 20, color: "#FF4081" },
+    ],
+  },
+  {
+    id: "lunar-new-year",
+    name: "Lunar New Year",
+    image: null,
+    config: { primaryColor: "#D32F2F", style: "lunar-new-year" },
+    segments: [
+      { label: "Lucky 10%", value: "LUNAR10", probability: 25, color: "#D32F2F" },
+      { label: "Try Again", value: "NONE", probability: 35, color: "#FFCDD2" },
+      { label: "Lucky 20%", value: "LUNAR20", probability: 15, color: "#FF6F00" },
+      { label: "Red Envelope", value: "LUCKY50", probability: 25, color: "#B71C1C" },
+    ],
+  },
+  {
+    id: "spin-for-luck",
+    name: "Spin for Luck!",
+    image: null,
+    config: { primaryColor: "#4CAF50", style: "spin-for-luck" },
+    segments: [
+      { label: "15% OFF", value: "LUCK15", probability: 25, color: "#4CAF50" },
+      { label: "No Luck", value: "NONE", probability: 35, color: "#E8F5E9" },
+      { label: "30% OFF", value: "LUCK30", probability: 15, color: "#2E7D32" },
+      { label: "Free Shipping", value: "LUCKSHIP", probability: 25, color: "#66BB6A" },
+    ],
+  },
+];
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -30,7 +94,17 @@ export const loader = async ({ request }) => {
 
 export default function CampaignsPage() {
   const { wheels } = useLoaderData();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState("all");
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const openModal = useCallback(() => setModalOpen(true), []);
+  const closeModal = useCallback(() => setModalOpen(false), []);
+
+  const handleSelectTemplate = (templateId) => {
+    setModalOpen(false);
+    navigate(`/app/wheels/new?template=${templateId}`);
+  };
 
   const filtered =
     filter === "active"
@@ -41,13 +115,12 @@ export default function CampaignsPage() {
     <Page
       title="Campaigns"
       primaryAction={
-        <Button variant="primary" url="/app/wheels/new">
+        <Button variant="primary" onClick={openModal}>
           Create Campaign
         </Button>
       }
     >
       <Card padding="0">
-        {/* Card header with tabs */}
         <Box padding="400" paddingBlockEnd="0">
           <InlineStack align="space-between" blockAlign="center">
             <Text variant="headingMd" as="h2" fontWeight="bold">
@@ -102,7 +175,7 @@ export default function CampaignsPage() {
               }
               action={{
                 content: "Create Campaign",
-                url: "/app/wheels/new",
+                onAction: openModal,
               }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
@@ -172,6 +245,79 @@ export default function CampaignsPage() {
           </Box>
         )}
       </Card>
+
+      {/* Template Selection Modal */}
+      <Modal open={modalOpen} onClose={closeModal} title="Create Campaign">
+        <Modal.Section>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "16px",
+            }}
+          >
+            {TEMPLATES.map((template) => (
+              <div
+                key={template.id}
+                style={{
+                  border: "1px solid #e3e3e3",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  background: "#fff",
+                }}
+              >
+                {/* Image placeholder */}
+                <div
+                  style={{
+                    width: "100%",
+                    height: "180px",
+                    background: "#f6f6f7",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderBottom: "1px solid #e3e3e3",
+                  }}
+                >
+                  {template.image ? (
+                    <img
+                      src={template.image}
+                      alt={template.name}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <Text tone="subdued" variant="bodySm">
+                      Preview
+                    </Text>
+                  )}
+                </div>
+                {/* Footer */}
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text variant="bodyMd" fontWeight="semibold">
+                    {template.name}
+                  </Text>
+                  <Button
+                    onClick={() => handleSelectTemplate(template.id)}
+                    size="slim"
+                  >
+                    Select
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Modal.Section>
+      </Modal>
     </Page>
   );
 }
