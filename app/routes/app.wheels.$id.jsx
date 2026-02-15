@@ -398,12 +398,30 @@ export default function WheelEditor() {
     ),
     showSideTriggerButton: Boolean(parsedConfig.showSideTriggerButton),
     showCountdownAfterReveal: Boolean(parsedConfig.showCountdownAfterReveal),
-    title: parsedConfig.title || "Spin & Win!",
-    description:
+    initialHeading:
+      parsedConfig.initialHeading ||
+      parsedConfig.title ||
+      "Spin & Win!",
+    initialDescription:
+      parsedConfig.initialDescription ||
       parsedConfig.description ||
       "Spin the wheel and unlock exclusive rewards instantly.",
-    emailPlaceholder: parsedConfig.emailPlaceholder || "Enter your email",
-    ctaText: parsedConfig.ctaText || "SPIN NOW",
+    initialEmailPlaceholder:
+      parsedConfig.initialEmailPlaceholder ||
+      parsedConfig.emailPlaceholder ||
+      "Enter your email",
+    initialCtaText:
+      parsedConfig.initialCtaText ||
+      parsedConfig.ctaText ||
+      "SPIN NOW",
+    resultHeading: parsedConfig.resultHeading || "🎁 You Won!",
+    resultDescription:
+      parsedConfig.resultDescription ||
+      "Copy your code and enjoy your reward at checkout.",
+    resultCode: parsedConfig.resultCode || "PS123",
+    resultCopyButtonText: parsedConfig.resultCopyButtonText || "Copy Code",
+    resultContinueButtonText:
+      parsedConfig.resultContinueButtonText || "Continue Shopping",
     backgroundColor: normalizeHex(parsedConfig.backgroundColor, "#fff8f0"),
     headingColor: normalizeHex(parsedConfig.headingColor, "#8b4513"),
     textColor: normalizeHex(parsedConfig.textColor, "#3e2723"),
@@ -693,6 +711,7 @@ export default function WheelEditor() {
   const showTopLogo =
     Boolean(config.logoImageUrl) &&
     (config.logoPosition === "top_of_popup" || config.logoPosition === "both");
+  const previewResultSegment = segments[0] || null;
 
   const handleApplyCombinesToAll = () => {
     if (!discountDraft) return;
@@ -778,6 +797,84 @@ export default function WheelEditor() {
                   onChange={(value) => handleConfigChange("popupBehavior", value)}
                   helpText="Choose how the spin wheel interaction works"
                 />
+
+                <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
+                  <BlockStack gap="300">
+                    <Text as="h3" variant="headingSm" fontWeight="semibold">
+                      Initial screen text
+                    </Text>
+                    <TextField
+                      label="Heading"
+                      value={config.initialHeading}
+                      onChange={(value) => handleConfigChange("initialHeading", value)}
+                      autoComplete="off"
+                    />
+                    <TextField
+                      label="Description"
+                      value={config.initialDescription}
+                      onChange={(value) => handleConfigChange("initialDescription", value)}
+                      autoComplete="off"
+                      multiline={3}
+                    />
+                    <InlineGrid columns={2} gap="300">
+                      <TextField
+                        label="Email placeholder"
+                        value={config.initialEmailPlaceholder}
+                        onChange={(value) => handleConfigChange("initialEmailPlaceholder", value)}
+                        autoComplete="off"
+                      />
+                      <TextField
+                        label="CTA button label"
+                        value={config.initialCtaText}
+                        onChange={(value) => handleConfigChange("initialCtaText", value)}
+                        autoComplete="off"
+                      />
+                    </InlineGrid>
+                  </BlockStack>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
+                  <BlockStack gap="300">
+                    <Text as="h3" variant="headingSm" fontWeight="semibold">
+                      Result screen text
+                    </Text>
+                    <TextField
+                      label="Result heading"
+                      value={config.resultHeading}
+                      onChange={(value) => handleConfigChange("resultHeading", value)}
+                      autoComplete="off"
+                    />
+                    <TextField
+                      label="Result description"
+                      value={config.resultDescription}
+                      onChange={(value) => handleConfigChange("resultDescription", value)}
+                      autoComplete="off"
+                      multiline={3}
+                    />
+                    <InlineGrid columns={2} gap="300">
+                      <TextField
+                        label="Reward code"
+                        value={config.resultCode}
+                        onChange={(value) => handleConfigChange("resultCode", value)}
+                        autoComplete="off"
+                      />
+                      <TextField
+                        label="Copy button label"
+                        value={config.resultCopyButtonText}
+                        onChange={(value) => handleConfigChange("resultCopyButtonText", value)}
+                        autoComplete="off"
+                      />
+                    </InlineGrid>
+                    <TextField
+                      label="Continue button label"
+                      value={config.resultContinueButtonText}
+                      onChange={(value) =>
+                        handleConfigChange("resultContinueButtonText", value)
+                      }
+                      autoComplete="off"
+                    />
+                  </BlockStack>
+                </Box>
               </BlockStack>
             </Card>
 
@@ -1475,57 +1572,134 @@ export default function WheelEditor() {
                   </div>
                   </div>
 
-                  <div style={{ marginTop: "14px" }}>
-                    <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
-                      <span style={{ color: config.headingColor }}>{config.title}</span>
-                    </Text>
-                  </div>
+                  {previewTab === "result" ? (
+                    <>
+                      <div style={{ marginTop: "14px" }}>
+                        <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
+                          <span style={{ color: config.headingColor }}>{config.resultHeading}</span>
+                        </Text>
+                      </div>
 
-                  <div style={{ marginTop: "6px" }}>
-                    <Text as="p" tone="subdued">
-                      <span style={{ color: config.textColor }}>
-                        {previewTab === "initial"
-                          ? config.description
-                          : previewTab === "result"
-                            ? "Congratulations! You unlocked a reward."
-                            : previewTab === "side_button"
-                              ? "Side button mode preview."
-                              : "Countdown mode preview."}
-                      </span>
-                    </Text>
-                  </div>
+                      <div style={{ marginTop: "6px" }}>
+                        <Text as="p" tone="subdued">
+                          <span style={{ color: config.textColor }}>{config.resultDescription}</span>
+                        </Text>
+                      </div>
 
-                  <div style={{ marginTop: "14px" }}>
-                    <input
-                      readOnly
-                      value={config.emailPlaceholder}
-                      style={{
-                        width: "100%",
-                        boxSizing: "border-box",
-                        borderRadius: "10px",
-                        border: "1px solid #d2d5d8",
-                        padding: "11px 12px",
-                        background: "#fff",
-                        color: "#8c9196",
-                        marginBottom: "12px",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      style={{
-                        width: "100%",
-                        border: "none",
-                        borderRadius: "10px",
-                        padding: "12px",
-                        fontWeight: 700,
-                        background: config.buttonBackgroundColor,
-                        color: config.buttonTextColor,
-                        cursor: "default",
-                      }}
-                    >
-                      {config.ctaText}
-                    </button>
-                  </div>
+                      {previewResultSegment ? (
+                        <div style={{ marginTop: "6px" }}>
+                          <Text as="p" tone="subdued">
+                            <span style={{ color: config.textColor }}>
+                              Reward: {previewResultSegment.label}
+                            </span>
+                          </Text>
+                        </div>
+                      ) : null}
+
+                      <div style={{ marginTop: "14px", display: "flex", alignItems: "stretch" }}>
+                        <div
+                          style={{
+                            flex: 1,
+                            border: `2px dashed ${config.buttonBackgroundColor}`,
+                            borderRight: "none",
+                            borderRadius: "10px 0 0 10px",
+                            background: "#fff",
+                            padding: "10px 12px",
+                            textAlign: "left",
+                            fontSize: "32px",
+                            lineHeight: 1.1,
+                            color: "#303030",
+                          }}
+                        >
+                          {config.resultCode}
+                        </div>
+                        <button
+                          type="button"
+                          style={{
+                            border: "none",
+                            borderRadius: "0 10px 10px 0",
+                            padding: "0 16px",
+                            fontWeight: 700,
+                            background: config.buttonBackgroundColor,
+                            color: config.buttonTextColor,
+                            cursor: "default",
+                          }}
+                        >
+                          {config.resultCopyButtonText}
+                        </button>
+                      </div>
+
+                      <div style={{ marginTop: "12px" }}>
+                        <button
+                          type="button"
+                          style={{
+                            width: "100%",
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            fontWeight: 700,
+                            background: config.buttonBackgroundColor,
+                            color: config.buttonTextColor,
+                            cursor: "default",
+                          }}
+                        >
+                          {config.resultContinueButtonText}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ marginTop: "14px" }}>
+                        <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
+                          <span style={{ color: config.headingColor }}>{config.initialHeading}</span>
+                        </Text>
+                      </div>
+
+                      <div style={{ marginTop: "6px" }}>
+                        <Text as="p" tone="subdued">
+                          <span style={{ color: config.textColor }}>
+                            {previewTab === "initial"
+                              ? config.initialDescription
+                              : previewTab === "side_button"
+                                ? "Side button mode preview."
+                                : "Countdown mode preview."}
+                          </span>
+                        </Text>
+                      </div>
+
+                      <div style={{ marginTop: "14px" }}>
+                        <input
+                          readOnly
+                          value={config.initialEmailPlaceholder}
+                          style={{
+                            width: "100%",
+                            boxSizing: "border-box",
+                            borderRadius: "10px",
+                            border: "1px solid #d2d5d8",
+                            padding: "11px 12px",
+                            background: "#fff",
+                            color: "#8c9196",
+                            marginBottom: "12px",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          style={{
+                            width: "100%",
+                            border: "none",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            fontWeight: 700,
+                            background: config.buttonBackgroundColor,
+                            color: config.buttonTextColor,
+                            cursor: "default",
+                          }}
+                        >
+                          {config.initialCtaText}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </Box>
             </Card>
