@@ -1,0 +1,265 @@
+import { json } from "@remix-run/node";
+import { useLoaderData, useFetcher } from "@remix-run/react";
+import {
+  Page,
+  Card,
+  BlockStack,
+  Text,
+  Button,
+  Banner,
+  DropZone,
+} from "@shopify/polaris";
+import { authenticate } from "../shopify.server";
+import db from "../db.server";
+import { useState, useCallback } from "react";
+
+export const loader = async ({ request }) => {
+  const { session } = await authenticate.admin(request);
+
+  const [wheels, customCode] = await Promise.all([
+    db.wheel.findMany({
+      where: { shop: session.shop },
+      include: { segments: true },
+    }),
+    db.customCode.findUnique({ where: { shop: session.shop } }),
+  ]);
+
+  return json({ wheels, customCode: customCode?.code || "" });
+};
+
+export const action = async ({ request }) => {
+  const { session } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "export") {
+    const [wheels, customCode] = await Promise.all([
+      db.wheel.findMany({
+        where: { shop: session.shop },
+        include: { segments: true },
+      }),
+      db.customCode.findUnique({ where: { shop: session.shop } }),
+    ]);
+
+    const exportData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      shop: session.shop,
+      wheels: wheels.map((w) => ({
+        id: w.id,
+        title: w.title,
+        isActive: w.isActive,
+        config: w.config,
+        segments: w.segments.map((s) => ({
+          id: s.id,
+          label: s.label,
+          value: s.value,
+          probability: s.probability,
+          color: s.color,
+        })),
+      })),
+      customCode: customCode?.code || "",
+    };
+
+    return json({ exportData });
+  }
+
+  if (intent === "import") {
+    const raw = formData.get("data");
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return json({ error: "Invalid JSON file." }, { status: 400 });
+    }
+
+    if (!data.wheels || !Array.isArray(data.wheels)) {
+      return json({ error: "Invalid file format. Missing wheels data." }, { status: 400 });
+    }
+
+    for (const wheel of data.wheels) {
+      const existing = await db.wheel.findUnique({ where: { id: wheel.id } });
+
+      if (existing) {
+        await db.segment.deleteMany({ where: { wheelId: wheel.id } });
+        await db.wheel.update({
+          where: { id: wheel.id },
+          data: {
+            title: wheel.title,
+            isActive: wheel.isActive,
+            config: wheel.config || "{}",
+            segments: {
+              create: (wheel.segments || []).map((s) => ({
+                label: s.label,
+                value: s.value,
+                probability: s.probability,
+                color: s.color || null,
+              })),
+            },
+          },
+        });
+      } else {
+        await db.wheel.create({
+          data: {
+            id: wheel.id,
+            shop: session.shop,
+            title: wheel.title,
+            isActive: wheel.isActive,
+            config: wheel.config || "{}",
+            segments: {
+              create: (wheel.segments || []).map((s) => ({
+                label: s.label,
+                value: s.value,
+                probability: s.probability,
+                color: s.color || null,
+              })),
+            },
+          },
+        });
+      }
+    }
+
+    if (typeof data.customCode === "string") {
+      await db.customCode.upsert({
+        where: { shop: session.shop },
+        update: { code: data.customCode },
+        create: { shop: session.shop, code: data.customCode },
+      });
+    }
+
+    return json({ success: true, imported: data.wheels.length });
+  }
+
+  return json({ error: "Unknown action" }, { status: 400 });
+};
+
+export default function ImportExportPage() {
+  const fetcher = useFetcher();
+  const [file, setFile] = useState(null);
+  const [importStatus, setImportStatus] = useState(null);
+
+  const isExporting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "export";
+  const isImporting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "import";
+
+  // Handle export response — trigger download
+  if (fetcher.data?.exportData && !isExporting) {
+    const blob = new Blob([JSON.stringify(fetcher.data.exportData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `wheel-app-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    fetcher.data.exportData = null;
+  }
+
+  // Handle import response
+  if (fetcher.data?.success && fetcher.data?.imported != null && importStatus !== "done") {
+    setImportStatus("done");
+    setFile(null);
+  }
+
+  const handleExport = () => {
+    const formData = new FormData();
+    formData.set("intent", "export");
+    fetcher.submit(formData, { method: "post" });
+  };
+
+  const handleDrop = useCallback((_droppedFiles, acceptedFiles) => {
+    if (acceptedFiles.length > 0) {
+      setFile(acceptedFiles[0]);
+      setImportStatus(null);
+    }
+  }, []);
+
+  const handleImport = () => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const formData = new FormData();
+      formData.set("intent", "import");
+      formData.set("data", e.target.result);
+      fetcher.submit(formData, { method: "post" });
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <Page title="Import & Export" backAction={{ url: "/app" }}>
+      <BlockStack gap="500">
+        {/* Export */}
+        <Card>
+          <BlockStack gap="400">
+            <Text variant="headingMd" as="h2" fontWeight="bold">
+              Export Settings
+            </Text>
+            <Text tone="subdued">
+              Download a backup of all your campaigns, active campaign settings, and custom code.
+            </Text>
+            <div>
+              <Button variant="primary" onClick={handleExport} loading={isExporting}>
+                Export Settings to JSON
+              </Button>
+            </div>
+          </BlockStack>
+        </Card>
+
+        {/* Import */}
+        <Card>
+          <BlockStack gap="400">
+            <Text variant="headingMd" as="h2" fontWeight="bold">
+              Import Settings
+            </Text>
+            <Text tone="subdued">
+              Upload a previously exported JSON file to restore your settings.
+            </Text>
+            <Banner tone="warning">
+              <p>
+                Importing will overwrite existing campaigns with the same ID and replace your current custom code.
+              </p>
+            </Banner>
+
+            <DropZone
+              accept=".json"
+              type="file"
+              allowMultiple={false}
+              onDrop={handleDrop}
+            >
+              {file ? (
+                <DropZone.FileUpload actionHint={file.name} />
+              ) : (
+                <DropZone.FileUpload actionHint="Accepts .json" />
+              )}
+            </DropZone>
+
+            {file && (
+              <div>
+                <Button variant="primary" onClick={handleImport} loading={isImporting}>
+                  Import Settings
+                </Button>
+              </div>
+            )}
+
+            {importStatus === "done" && (
+              <Banner tone="success">
+                <p>
+                  Successfully imported {fetcher.data?.imported} campaign(s).
+                </p>
+              </Banner>
+            )}
+
+            {fetcher.data?.error && (
+              <Banner tone="critical">
+                <p>{fetcher.data.error}</p>
+              </Banner>
+            )}
+          </BlockStack>
+        </Card>
+      </BlockStack>
+    </Page>
+  );
+}
