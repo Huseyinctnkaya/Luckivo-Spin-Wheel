@@ -1,0 +1,53 @@
+<link rel="stylesheet" href="{{ 'lucky_wheel.css' | asset_url }}">
+<script src="{{ 'lucky_wheel.js' | asset_url }}" defer="defer"></script>
+
+<div id="lucky-wheel-root" 
+     class="lucky-wheel-container"
+     data-shop="{{ shop.permanent_domain }}"
+     data-proxy-url="/apps/wheel-proxy">
+  
+  <div class="lucky-wheel-overlay" id="lucky-wheel-overlay" style="display: none;">
+    <div class="lucky-wheel-modal">
+      <button class="lucky-wheel-close" id="lucky-wheel-close">&times;</button>
+      
+      <div class="lucky-wheel-content">
+        <h2 id="lucky-wheel-title">Spin to Win!</h2>
+        <p id="lucky-wheel-description">Try your luck and win amazing prizes!</p>
+        
+        <div class="wheel-wrapper">
+          <canvas id="wheel-canvas" width="400" height="400"></canvas>
+          <div class="wheel-pointer"></div>
+        </div>
+        
+        <div class="lucky-wheel-form" id="lucky-wheel-form">
+          <input type="email" id="lucky-wheel-email" placeholder="Enter your email" required>
+          <button type="button" id="lucky-wheel-spin-btn">SPIN NOW</button>
+        </div>
+
+        <div id="lucky-wheel-result" style="display: none;">
+          <h3>Congratulations!</h3>
+          <p id="lucky-wheel-result-text"></p>
+          <div class="coupon-box">
+             <span id="lucky-wheel-coupon"></span>
+             <button onclick="copyCoupon()">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Lucky Wheel",
+  "target": "section",
+  "settings": [
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#4f46e5"
+    }
+  ]
+}
+{% endschema %}
