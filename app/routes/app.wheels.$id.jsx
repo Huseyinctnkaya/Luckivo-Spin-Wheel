@@ -418,6 +418,7 @@ export default function WheelEditor() {
   const [segments, setSegments] = useState(wheel.segments);
   const [previewTab, setPreviewTab] = useState("initial");
   const [previewDevice, setPreviewDevice] = useState("mobile");
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [colorsOpen, setColorsOpen] = useState(true);
   const [contentOpen, setContentOpen] = useState(true);
   const [contentTab, setContentTab] = useState("general");
@@ -1027,6 +1028,524 @@ export default function WheelEditor() {
     closeDiscountEditor();
   };
 
+  const renderWheelPreview = ({ wheelSize, labelFontSize, labelWidth }) => (
+    <div
+      style={{
+        margin: "8px auto 0",
+        width: `${wheelSize}px`,
+        height: `${wheelSize}px`,
+        borderRadius: "50%",
+        border: "6px solid #f1ad46",
+        background: wheelGradient,
+        position: "relative",
+      }}
+    >
+      {wheelSliceLabels.map((slice) => {
+        if (!slice.label) return null;
+        const theta = (slice.angle * Math.PI) / 180;
+        const radiusPercent = wheelSize >= 300 ? 36 : previewDevice === "mobile" ? 33 : 35;
+        const x = 50 + radiusPercent * Math.sin(theta);
+        const y = 50 - radiusPercent * Math.cos(theta);
+        const normalizedAngle = ((slice.angle % 360) + 360) % 360;
+        const textRotation =
+          normalizedAngle > 90 && normalizedAngle < 270
+            ? slice.angle + 180
+            : slice.angle;
+
+        return (
+          <div
+            key={slice.id}
+            style={{
+              position: "absolute",
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: `translate(-50%, -50%) rotate(${textRotation}deg)`,
+              color: slice.color,
+              fontWeight: 700,
+              fontSize: labelFontSize,
+              lineHeight: 1.1,
+              textAlign: "center",
+              width: labelWidth,
+              pointerEvents: "none",
+              whiteSpace: "normal",
+              overflowWrap: "break-word",
+              textShadow: "0 1px 0 rgba(255,255,255,0.45)",
+            }}
+          >
+            {slice.label}
+          </div>
+        );
+      })}
+
+      <div
+        style={{
+          position: "absolute",
+          right: "-18px",
+          top: "50%",
+          transform: "translateY(-50%)",
+          width: "22px",
+          height: "22px",
+          borderRadius: "50%",
+          border: "4px solid #f1ad46",
+          background: "#fff",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: wheelSize >= 300 ? "86px" : "74px",
+          height: wheelSize >= 300 ? "86px" : "74px",
+          borderRadius: "50%",
+          background: showCenterLogo ? "#fff" : config.wheelCenterColor,
+          border: "4px solid #ffffff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+          color: config.wheelTextColor,
+          fontWeight: 700,
+          fontSize: wheelSize >= 300 ? "18px" : "16px",
+        }}
+      >
+        {showCenterLogo ? (
+          <img
+            src={config.logoImageUrl}
+            alt="Center logo"
+            style={{
+              width: "100%",
+              height: "100%",
+              padding: wheelSize >= 300 ? "10px" : "8px",
+              objectFit: "contain",
+            }}
+          />
+        ) : (
+          "SPIN"
+        )}
+      </div>
+    </div>
+  );
+
+  const renderInitialContent = ({ desktopLayout = false } = {}) => (
+    <>
+      <div style={{ marginTop: desktopLayout ? "0" : "14px" }}>
+        <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
+          <span style={{ color: config.headingColor }}>{config.initialHeading}</span>
+        </Text>
+      </div>
+
+      <div style={{ marginTop: "6px" }}>
+        <Text as="p" tone="subdued">
+          <span style={{ color: config.textColor }}>
+            {config.initialDescription}
+          </span>
+        </Text>
+      </div>
+
+      <div style={{ marginTop: "14px" }}>
+        <input
+          readOnly
+          value={config.initialEmailPlaceholder}
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            borderRadius: "10px",
+            border: "1px solid #d2d5d8",
+            padding: "11px 12px",
+            background: "#fff",
+            color: "#8c9196",
+            marginBottom: "12px",
+          }}
+        />
+        <button
+          type="button"
+          style={{
+            width: "100%",
+            border: "none",
+            borderRadius: "10px",
+            padding: "12px",
+            fontWeight: 700,
+            background: config.buttonBackgroundColor,
+            color: config.buttonTextColor,
+            cursor: "default",
+          }}
+        >
+          {config.initialCtaText}
+        </button>
+        <div style={{ marginTop: "10px", textAlign: "left" }}>
+          <Text as="p" tone="subdued">
+            <span style={{ color: config.textColor }}>
+              {config.initialInfoText}
+            </span>
+          </Text>
+        </div>
+      </div>
+    </>
+  );
+
+  const renderResultContent = ({ desktopLayout = false } = {}) => (
+    <>
+      <div style={{ marginTop: desktopLayout ? "0" : "14px" }}>
+        <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
+          <span style={{ color: config.headingColor }}>{config.resultHeading}</span>
+        </Text>
+      </div>
+
+      <div style={{ marginTop: "6px" }}>
+        <Text as="p" tone="subdued">
+          <span style={{ color: config.textColor }}>
+            {config.resultDescription}
+          </span>
+        </Text>
+      </div>
+
+      <div style={{ marginTop: "4px" }}>
+        <Text as="p" tone="subdued">
+          <span style={{ color: config.textColor }}>
+            {config.resultEmailSentText}
+          </span>
+        </Text>
+      </div>
+
+      {previewResultSegment ? (
+        <div style={{ marginTop: "6px" }}>
+          <Text as="p" tone="subdued">
+            <span style={{ color: config.textColor }}>
+              Reward: {previewResultSegment.label}
+            </span>
+          </Text>
+        </div>
+      ) : null}
+
+      <div style={{ marginTop: "14px", display: "flex", alignItems: "stretch" }}>
+        <div
+          style={{
+            flex: 1,
+            border: `2px dashed ${config.buttonBackgroundColor}`,
+            borderRight: "none",
+            borderRadius: "10px 0 0 10px",
+            background: "#fff",
+            padding: "10px 12px",
+            textAlign: "left",
+            fontSize: desktopLayout ? "28px" : "32px",
+            lineHeight: 1.1,
+            color: "#303030",
+          }}
+        >
+          {previewResultCode}
+        </div>
+        <button
+          type="button"
+          style={{
+            border: "none",
+            borderRadius: "0 10px 10px 0",
+            padding: "0 16px",
+            fontWeight: 700,
+            background: config.buttonBackgroundColor,
+            color: config.buttonTextColor,
+            cursor: "default",
+          }}
+        >
+          {config.resultCopyCodeLabel}
+        </button>
+      </div>
+
+      <div style={{ marginTop: "12px" }}>
+        <button
+          type="button"
+          style={{
+            width: "100%",
+            border: "none",
+            borderRadius: "10px",
+            padding: "12px",
+            fontWeight: 700,
+            background: config.buttonBackgroundColor,
+            color: config.buttonTextColor,
+            cursor: "default",
+          }}
+        >
+          {config.resultContinueButtonLabel}
+        </button>
+      </div>
+    </>
+  );
+
+  const renderPreviewCanvas = ({ inModal = false } = {}) => {
+    const isDesktopModalLayout = inModal && previewDevice === "desktop";
+    const wheelSize =
+      previewDevice === "mobile" ? 220 : isDesktopModalLayout ? 330 : 250;
+    const labelFontSize =
+      previewDevice === "mobile" ? "10px" : isDesktopModalLayout ? "14px" : "11px";
+    const labelWidth =
+      previewDevice === "mobile" ? "44px" : isDesktopModalLayout ? "72px" : "52px";
+
+    return (
+      <div
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+          textAlign: isDesktopModalLayout ? "left" : "center",
+          padding: isDesktopModalLayout ? "16px 18px 20px" : "12px",
+          borderRadius: "12px",
+          backgroundColor: config.backgroundColor,
+          backgroundImage: config.backgroundImageUrl
+            ? `url(${config.backgroundImageUrl})`
+            : "none",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        {previewTab === "countdown" ? (
+          <>
+            {!config.showCountdownAfterReveal ? (
+              <div
+                style={{
+                  marginBottom: "12px",
+                  background: "#dbe7f3",
+                  borderRadius: "10px",
+                  padding: "12px",
+                  textAlign: "left",
+                }}
+              >
+                <Text as="p" variant="bodyMd">
+                  Countdown timer is disabled in the settings.
+                </Text>
+                <div style={{ marginTop: "8px" }}>
+                  <Button
+                    size="slim"
+                    onClick={() => handleConfigChange("showCountdownAfterReveal", true)}
+                  >
+                    Enable
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                height: previewDevice === "mobile" ? "360px" : inModal ? "500px" : "440px",
+                border: "1px solid #a7a7a7",
+                borderRadius: "2px",
+                background: "#f6f6f7",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  [config.countdownPosition === "top_of_screen" ? "top" : "bottom"]: "10px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: config.buttonBackgroundColor,
+                  color: config.buttonTextColor,
+                  borderRadius: "10px",
+                  padding: "8px 10px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>
+                  {`${config.countdownTimerText} ${previewCountdownTime}`}
+                </span>
+                <span
+                  style={{
+                    border: `1px dashed ${config.buttonTextColor}`,
+                    borderRadius: "4px",
+                    padding: "2px 6px",
+                    fontSize: "12px",
+                  }}
+                >
+                  CODE
+                </span>
+                <span
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "50%",
+                    border: `1px solid ${config.buttonTextColor}`,
+                    background: "rgba(255,255,255,0.16)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    lineHeight: "14px",
+                  }}
+                >
+                  ×
+                </span>
+              </div>
+            </div>
+          </>
+        ) : previewTab === "side_button" ? (
+          <>
+            {!config.showSideTriggerButton ? (
+              <div
+                style={{
+                  marginBottom: "12px",
+                  background: "#dbe7f3",
+                  borderRadius: "10px",
+                  padding: "12px",
+                  textAlign: "left",
+                }}
+              >
+                <Text as="p" variant="bodyMd">
+                  Side trigger button is disabled in the settings.
+                </Text>
+                <div style={{ marginTop: "8px" }}>
+                  <Button
+                    size="slim"
+                    onClick={() => handleConfigChange("showSideTriggerButton", true)}
+                  >
+                    Enable
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                height: previewDevice === "mobile" ? "360px" : inModal ? "500px" : "440px",
+                border: "1px solid #a7a7a7",
+                borderRadius: "2px",
+                background: "#f6f6f7",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  [config.sideTriggerPosition === "right" ? "right" : "left"]: "0",
+                  transform: "translateY(-50%)",
+                  width: "34px",
+                  background: config.buttonBackgroundColor,
+                  color: config.buttonTextColor,
+                  borderRadius:
+                    config.sideTriggerPosition === "right"
+                      ? "10px 0 0 10px"
+                      : "0 10px 10px 0",
+                  padding: "8px 4px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                }}
+              >
+                <span style={{ fontSize: "18px", lineHeight: 1 }}>×</span>
+                <span
+                  style={{
+                    writingMode: "vertical-rl",
+                    transform: "rotate(180deg)",
+                    fontWeight: 600,
+                    letterSpacing: "0.2px",
+                  }}
+                >
+                  {previewSideButtonText}
+                </span>
+                {config.sideTriggerType === "icon_text" ? (
+                  <span style={{ fontSize: "14px", lineHeight: 1 }}>↗</span>
+                ) : null}
+              </div>
+            </div>
+          </>
+        ) : isDesktopModalLayout ? (
+          <div
+            style={{
+              position: "relative",
+              display: "grid",
+              gridTemplateColumns: "minmax(320px, 46%) minmax(340px, 54%)",
+              gap: "28px",
+              alignItems: "center",
+              minHeight: "420px",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                top: "4px",
+                right: "8px",
+                fontSize: "24px",
+                color: "#303030",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </span>
+            <div>{renderWheelPreview({ wheelSize, labelFontSize, labelWidth })}</div>
+            <div style={{ textAlign: "left", paddingRight: "10px" }}>
+              {showTopLogo ? (
+                <div
+                  style={{
+                    marginBottom: "12px",
+                    width: "58px",
+                    height: "58px",
+                    borderRadius: "50%",
+                    border: "2px solid #fff",
+                    overflow: "hidden",
+                    background: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <img
+                    src={config.logoImageUrl}
+                    alt="Wheel logo"
+                    style={{ width: "100%", height: "100%", objectFit: "contain", padding: "6px" }}
+                  />
+                </div>
+              ) : null}
+              {previewTab === "result"
+                ? renderResultContent({ desktopLayout: true })
+                : renderInitialContent({ desktopLayout: true })}
+            </div>
+          </div>
+        ) : (
+          <>
+            {showTopLogo ? (
+              <div
+                style={{
+                  margin: "0 auto 12px",
+                  width: "58px",
+                  height: "58px",
+                  borderRadius: "50%",
+                  border: "2px solid #fff",
+                  overflow: "hidden",
+                  background: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+                }}
+              >
+                <img
+                  src={config.logoImageUrl}
+                  alt="Wheel logo"
+                  style={{ width: "100%", height: "100%", objectFit: "contain", padding: "6px" }}
+                />
+              </div>
+            ) : null}
+
+            {renderWheelPreview({ wheelSize, labelFontSize, labelWidth })}
+            {previewTab === "result"
+              ? renderResultContent()
+              : renderInitialContent()}
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Page
       title={title}
@@ -1034,7 +1553,11 @@ export default function WheelEditor() {
       secondaryActions={[
         {
           content: "Preview",
-          onAction: () => setPreviewTab("initial"),
+          onAction: () => {
+            setPreviewTab("initial");
+            setPreviewDevice("desktop");
+            setPreviewModalOpen(true);
+          },
         },
       ]}
     >
@@ -1889,7 +2412,10 @@ export default function WheelEditor() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPreviewDevice("desktop")}
+                      onClick={() => {
+                        setPreviewDevice("desktop");
+                        setPreviewModalOpen(true);
+                      }}
                       style={{
                         border: "none",
                         background: previewDevice === "desktop" ? "#303030" : "transparent",
@@ -1927,449 +2453,39 @@ export default function WheelEditor() {
                 borderBlockStartWidth="025"
                 borderColor="border"
               >
-                <div
-                  style={{
-                    width: "100%",
-                    boxSizing: "border-box",
-                    textAlign: "center",
-                    padding: "12px",
-                    borderRadius: "12px",
-                    backgroundColor: config.backgroundColor,
-                    backgroundImage: config.backgroundImageUrl
-                      ? `url(${config.backgroundImageUrl})`
-                      : "none",
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                  }}
-                >
-                  {previewTab === "countdown" ? (
-                    <>
-                      {!config.showCountdownAfterReveal ? (
-                        <div
-                          style={{
-                            marginBottom: "12px",
-                            background: "#dbe7f3",
-                            borderRadius: "10px",
-                            padding: "12px",
-                            textAlign: "left",
-                          }}
-                        >
-                          <Text as="p" variant="bodyMd">
-                            Countdown timer is disabled in the settings.
-                          </Text>
-                          <div style={{ marginTop: "8px" }}>
-                            <Button size="slim" onClick={() => handleConfigChange("showCountdownAfterReveal", true)}>
-                              Enable
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div
-                        style={{
-                          position: "relative",
-                          width: "100%",
-                          height: previewDevice === "mobile" ? "360px" : "440px",
-                          border: "1px solid #a7a7a7",
-                          borderRadius: "2px",
-                          background: "#f6f6f7",
-                        }}
-                      >
-                        <div
-                          style={{
-                            position: "absolute",
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            [config.countdownPosition === "top_of_screen" ? "top" : "bottom"]: "10px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            background: config.buttonBackgroundColor,
-                            color: config.buttonTextColor,
-                            borderRadius: "10px",
-                            padding: "8px 10px",
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                          }}
-                        >
-                          <span style={{ fontWeight: 600 }}>
-                            {`${config.countdownTimerText} ${previewCountdownTime}`}
-                          </span>
-                          <span
-                            style={{
-                              border: `1px dashed ${config.buttonTextColor}`,
-                              borderRadius: "4px",
-                              padding: "2px 6px",
-                              fontSize: "12px",
-                            }}
-                          >
-                            CODE
-                          </span>
-                          <span
-                            style={{
-                              width: "20px",
-                              height: "20px",
-                              borderRadius: "50%",
-                              border: `1px solid ${config.buttonTextColor}`,
-                              background: "rgba(255,255,255,0.16)",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "14px",
-                              fontWeight: 700,
-                              lineHeight: "14px",
-                            }}
-                          >
-                            ×
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  ) : previewTab === "side_button" ? (
-                    <>
-                      {!config.showSideTriggerButton ? (
-                        <div
-                          style={{
-                            marginBottom: "12px",
-                            background: "#dbe7f3",
-                            borderRadius: "10px",
-                            padding: "12px",
-                            textAlign: "left",
-                          }}
-                        >
-                          <Text as="p" variant="bodyMd">
-                            Side trigger button is disabled in the settings.
-                          </Text>
-                          <div style={{ marginTop: "8px" }}>
-                            <Button size="slim" onClick={() => handleConfigChange("showSideTriggerButton", true)}>
-                              Enable
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div
-                        style={{
-                          position: "relative",
-                          width: "100%",
-                          height: previewDevice === "mobile" ? "360px" : "440px",
-                          border: "1px solid #a7a7a7",
-                          borderRadius: "2px",
-                          background: "#f6f6f7",
-                        }}
-                      >
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "50%",
-                            [config.sideTriggerPosition === "right" ? "right" : "left"]: "0",
-                            transform: "translateY(-50%)",
-                            width: "34px",
-                            background: config.buttonBackgroundColor,
-                            color: config.buttonTextColor,
-                            borderRadius:
-                              config.sideTriggerPosition === "right"
-                                ? "10px 0 0 10px"
-                                : "0 10px 10px 0",
-                            padding: "8px 4px",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: "8px",
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                          }}
-                        >
-                          <span style={{ fontSize: "18px", lineHeight: 1 }}>×</span>
-                          <span
-                            style={{
-                              writingMode: "vertical-rl",
-                              transform: "rotate(180deg)",
-                              fontWeight: 600,
-                              letterSpacing: "0.2px",
-                            }}
-                          >
-                            {previewSideButtonText}
-                          </span>
-                          {config.sideTriggerType === "icon_text" ? (
-                            <span style={{ fontSize: "14px", lineHeight: 1 }}>↗</span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {showTopLogo ? (
-                        <div
-                          style={{
-                            margin: "0 auto 12px",
-                            width: "58px",
-                            height: "58px",
-                            borderRadius: "50%",
-                            border: "2px solid #fff",
-                            overflow: "hidden",
-                            background: "#fff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-                          }}
-                        >
-                          <img
-                            src={config.logoImageUrl}
-                            alt="Wheel logo"
-                            style={{ width: "100%", height: "100%", objectFit: "contain", padding: "6px" }}
-                          />
-                        </div>
-                      ) : null}
-
-                      <div
-                        style={{
-                          margin: "8px auto 0",
-                          width: previewDevice === "mobile" ? "220px" : "250px",
-                          height: previewDevice === "mobile" ? "220px" : "250px",
-                          borderRadius: "50%",
-                          border: "6px solid #f1ad46",
-                          background: wheelGradient,
-                          position: "relative",
-                        }}
-                      >
-                        {wheelSliceLabels.map((slice) => {
-                          if (!slice.label) return null;
-                          const theta = (slice.angle * Math.PI) / 180;
-                          const radiusPercent = previewDevice === "mobile" ? 33 : 35;
-                          const x = 50 + radiusPercent * Math.sin(theta);
-                          const y = 50 - radiusPercent * Math.cos(theta);
-                          const normalizedAngle = ((slice.angle % 360) + 360) % 360;
-                          const textRotation =
-                            normalizedAngle > 90 && normalizedAngle < 270
-                              ? slice.angle + 180
-                              : slice.angle;
-
-                          return (
-                            <div
-                              key={slice.id}
-                              style={{
-                                position: "absolute",
-                                left: `${x}%`,
-                                top: `${y}%`,
-                                transform: `translate(-50%, -50%) rotate(${textRotation}deg)`,
-                                color: slice.color,
-                                fontWeight: 700,
-                                fontSize: previewDevice === "mobile" ? "10px" : "11px",
-                                lineHeight: 1.1,
-                                textAlign: "center",
-                                width: previewDevice === "mobile" ? "44px" : "52px",
-                                pointerEvents: "none",
-                                whiteSpace: "normal",
-                                overflowWrap: "break-word",
-                                textShadow: "0 1px 0 rgba(255,255,255,0.45)",
-                              }}
-                            >
-                              {slice.label}
-                            </div>
-                          );
-                        })}
-
-                        <div
-                          style={{
-                            position: "absolute",
-                            right: "-18px",
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "50%",
-                            border: "4px solid #f1ad46",
-                            background: "#fff",
-                          }}
-                        />
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: "50%",
-                            left: "50%",
-                            transform: "translate(-50%, -50%)",
-                            width: "74px",
-                            height: "74px",
-                            borderRadius: "50%",
-                            background: showCenterLogo ? "#fff" : config.wheelCenterColor,
-                            border: "4px solid #ffffff",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden",
-                            color: config.wheelTextColor,
-                            fontWeight: 700,
-                            fontSize: "16px",
-                          }}
-                        >
-                          {showCenterLogo ? (
-                            <img
-                              src={config.logoImageUrl}
-                              alt="Center logo"
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                padding: "8px",
-                                objectFit: "contain",
-                              }}
-                            />
-                          ) : (
-                            "SPIN"
-                          )}
-                        </div>
-                      </div>
-
-                      {previewTab === "result" ? (
-                        <>
-                          <div style={{ marginTop: "14px" }}>
-                            <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
-                              <span style={{ color: config.headingColor }}>{config.resultHeading}</span>
-                            </Text>
-                          </div>
-
-                          <div style={{ marginTop: "6px" }}>
-                            <Text as="p" tone="subdued">
-                              <span style={{ color: config.textColor }}>
-                                {config.resultDescription}
-                              </span>
-                            </Text>
-                          </div>
-
-                          <div style={{ marginTop: "4px" }}>
-                            <Text as="p" tone="subdued">
-                              <span style={{ color: config.textColor }}>
-                                {config.resultEmailSentText}
-                              </span>
-                            </Text>
-                          </div>
-
-                          {previewResultSegment ? (
-                            <div style={{ marginTop: "6px" }}>
-                              <Text as="p" tone="subdued">
-                                <span style={{ color: config.textColor }}>
-                                  Reward: {previewResultSegment.label}
-                                </span>
-                              </Text>
-                            </div>
-                          ) : null}
-
-                          <div style={{ marginTop: "14px", display: "flex", alignItems: "stretch" }}>
-                            <div
-                              style={{
-                                flex: 1,
-                                border: `2px dashed ${config.buttonBackgroundColor}`,
-                                borderRight: "none",
-                                borderRadius: "10px 0 0 10px",
-                                background: "#fff",
-                                padding: "10px 12px",
-                                textAlign: "left",
-                                fontSize: "32px",
-                                lineHeight: 1.1,
-                                color: "#303030",
-                              }}
-                            >
-                              {previewResultCode}
-                            </div>
-                            <button
-                              type="button"
-                              style={{
-                                border: "none",
-                                borderRadius: "0 10px 10px 0",
-                                padding: "0 16px",
-                                fontWeight: 700,
-                                background: config.buttonBackgroundColor,
-                                color: config.buttonTextColor,
-                                cursor: "default",
-                              }}
-                            >
-                              {config.resultCopyCodeLabel}
-                            </button>
-                          </div>
-
-                          <div style={{ marginTop: "12px" }}>
-                            <button
-                              type="button"
-                              style={{
-                                width: "100%",
-                                border: "none",
-                                borderRadius: "10px",
-                                padding: "12px",
-                                fontWeight: 700,
-                                background: config.buttonBackgroundColor,
-                                color: config.buttonTextColor,
-                                cursor: "default",
-                              }}
-                            >
-                              {config.resultContinueButtonLabel}
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div style={{ marginTop: "14px" }}>
-                            <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
-                              <span style={{ color: config.headingColor }}>{config.initialHeading}</span>
-                            </Text>
-                          </div>
-
-                          <div style={{ marginTop: "6px" }}>
-                            <Text as="p" tone="subdued">
-                          <span style={{ color: config.textColor }}>
-                                {config.initialDescription}
-                              </span>
-                            </Text>
-                          </div>
-
-                          <div style={{ marginTop: "14px" }}>
-                            <input
-                              readOnly
-                              value={config.initialEmailPlaceholder}
-                              style={{
-                                width: "100%",
-                                boxSizing: "border-box",
-                                borderRadius: "10px",
-                                border: "1px solid #d2d5d8",
-                                padding: "11px 12px",
-                                background: "#fff",
-                                color: "#8c9196",
-                                marginBottom: "12px",
-                              }}
-                            />
-                            <button
-                              type="button"
-                              style={{
-                                width: "100%",
-                                border: "none",
-                                borderRadius: "10px",
-                                padding: "12px",
-                                fontWeight: 700,
-                                background: config.buttonBackgroundColor,
-                                color: config.buttonTextColor,
-                                cursor: "default",
-                              }}
-                            >
-                              {config.initialCtaText}
-                            </button>
-                            <div style={{ marginTop: "10px", textAlign: "left" }}>
-                              <Text as="p" tone="subdued">
-                                <span style={{ color: config.textColor }}>
-                                  {config.initialInfoText}
-                                </span>
-                              </Text>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
+                {renderPreviewCanvas()}
               </Box>
             </Card>
             </BlockStack>
         </Layout.Section>
         </Layout>
       </div>
+
+      <Modal
+        open={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        title="Preview"
+        size="large"
+      >
+        <Modal.Section>
+          <BlockStack gap="300">
+            <InlineStack gap="200">
+              {PREVIEW_TABS.map((tab) => (
+                <Button
+                  key={`modal-${tab.value}`}
+                  size="slim"
+                  variant={previewTab === tab.value ? "secondary" : "tertiary"}
+                  onClick={() => setPreviewTab(tab.value)}
+                >
+                  {tab.label}
+                </Button>
+              ))}
+            </InlineStack>
+
+            {renderPreviewCanvas({ inModal: true })}
+          </BlockStack>
+        </Modal.Section>
+      </Modal>
 
       <Modal
         open={editingDiscountIndex !== null && Boolean(discountDraft)}
