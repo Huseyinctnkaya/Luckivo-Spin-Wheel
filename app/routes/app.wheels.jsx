@@ -1,5 +1,11 @@
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useSubmit } from "@remix-run/react";
+import {
+  useLoaderData,
+  useSubmit,
+  useNavigate,
+  useMatches,
+  Outlet,
+} from "@remix-run/react";
 import {
   Page,
   Card,
@@ -107,8 +113,16 @@ export const action = async ({ request }) => {
 export default function WheelsPage() {
   const { wheels } = useLoaderData();
   const submit = useSubmit();
+  const navigate = useNavigate();
+  const matches = useMatches();
   const [filter, setFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
+
+  const childRouteActive = matches.some(
+    (match) =>
+      match.id === "routes/app.wheels.$id" ||
+      match.id === "routes/app.wheels.new",
+  );
 
   const openModal = useCallback(() => setModalOpen(true), []);
   const closeModal = useCallback(() => setModalOpen(false), []);
@@ -122,6 +136,10 @@ export default function WheelsPage() {
     filter === "active"
       ? wheels.filter((w) => w.isActive)
       : wheels;
+
+  if (childRouteActive) {
+    return <Outlet />;
+  }
 
   return (
     <Page
@@ -226,7 +244,10 @@ export default function WheelsPage() {
                   </IndexTable.Cell>
                   <IndexTable.Cell>
                     <InlineStack align="end" gap="200">
-                      <Button url={`/app/wheels/${wheel.id}`} size="slim">
+                      <Button
+                        size="slim"
+                        onClick={() => navigate(`/app/wheels/${wheel.id}`)}
+                      >
                         Edit
                       </Button>
                       <Button

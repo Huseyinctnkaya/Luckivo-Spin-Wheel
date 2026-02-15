@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
 import {
@@ -15,24 +15,32 @@ import {
   Box,
   InlineStack,
   Select,
+  Icon,
+  Popover,
+  ColorPicker,
+  hsbToHex,
+  hexToRgb,
+  rgbToHsb,
 } from "@shopify/polaris";
-import { ChevronDownIcon, ChevronUpIcon } from "@shopify/polaris-icons";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  DesktopIcon,
+  MobileIcon,
+} from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
 const WHEEL_STYLE_OPTIONS = [
+  { label: "Default", value: "default" },
   { label: "Classic", value: "classic" },
-  { label: "Modern", value: "modern" },
-  { label: "Minimal", value: "minimal" },
-  { label: "Playful", value: "playful" },
-  { label: "Neon", value: "neon" },
 ];
 
 const EFFECT_OPTIONS = [
   { label: "Default", value: "default" },
-  { label: "Pulse", value: "pulse" },
-  { label: "Glow", value: "glow" },
-  { label: "Confetti", value: "confetti" },
+  { label: "Valentine - Falling Hearts", value: "valentine_falling_hearts" },
+  { label: "Halloween dark", value: "halloween_dark" },
+  { label: "Halloween light", value: "halloween_light" },
 ];
 
 const POPUP_BEHAVIOR_OPTIONS = [
@@ -56,6 +64,10 @@ function parseConfig(rawConfig) {
   }
 }
 
+function getValidOptionValue(options, value, fallback) {
+  return options.some((option) => option.value === value) ? value : fallback;
+}
+
 function normalizeHex(input, fallback) {
   if (typeof input !== "string") return fallback;
   const value = input.trim().replace(/^#/, "");
@@ -63,6 +75,12 @@ function normalizeHex(input, fallback) {
     return `#${value}`;
   }
   return fallback;
+}
+
+function toHsbColor(input, fallback) {
+  const safeHex = normalizeHex(input, fallback);
+  const rgb = hexToRgb(safeHex);
+  return rgbToHsb(rgb);
 }
 
 function buildWheelGradient(segments) {
@@ -93,49 +111,71 @@ function buildWheelGradient(segments) {
   return `conic-gradient(${parts.join(", ")})`;
 }
 
-function ColorField({ label, value, onChange }) {
-  const normalized = normalizeHex(value, "#000000");
+function ColorField({ label, value, onChange, fallback = "#000000" }) {
+  const normalized = normalizeHex(value, fallback);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerColor, setPickerColor] = useState(() =>
+    toHsbColor(normalized, fallback),
+  );
+
+  useEffect(() => {
+    setPickerColor(toHsbColor(normalized, fallback));
+  }, [normalized, fallback]);
+
+  const handlePickerChange = (nextColor) => {
+    setPickerColor(nextColor);
+    onChange(normalizeHex(hsbToHex(nextColor), fallback));
+  };
+
+  const activator = (
+    <button
+      type="button"
+      onClick={() => setPickerOpen((open) => !open)}
+      style={{
+        width: "100%",
+        border: "1px solid #c9cccf",
+        borderRadius: "10px",
+        padding: "8px 10px",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        background: "#fff",
+        color: "#303030",
+        cursor: "pointer",
+      }}
+    >
+      <span
+        style={{
+          width: "20px",
+          height: "20px",
+          borderRadius: "4px",
+          border: "1px solid #b5b5b5",
+          background: normalized,
+          flexShrink: 0,
+        }}
+      />
+      <Text as="span" variant="bodyMd">
+        {normalized.toUpperCase()}
+      </Text>
+    </button>
+  );
 
   return (
     <div>
       <Text as="p" variant="bodyMd" tone="subdued">
         {label}
       </Text>
-      <div
-        style={{
-          marginTop: "6px",
-          border: "1px solid #c9cccf",
-          borderRadius: "10px",
-          padding: "6px 8px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-        }}
-      >
-        <input
-          type="color"
-          value={normalized}
-          onChange={(event) => onChange(event.target.value)}
-          style={{
-            width: "24px",
-            height: "24px",
-            border: "none",
-            background: "transparent",
-            padding: 0,
-          }}
-        />
-        <input
-          value={normalized}
-          onChange={(event) => onChange(event.target.value)}
-          style={{
-            border: "none",
-            outline: "none",
-            width: "100%",
-            fontSize: "14px",
-            background: "transparent",
-            color: "#303030",
-          }}
-        />
+      <div style={{ marginTop: "6px" }}>
+        <Popover
+          active={pickerOpen}
+          activator={activator}
+          autofocusTarget="none"
+          onClose={() => setPickerOpen(false)}
+        >
+          <Box padding="300">
+            <ColorPicker color={pickerColor} onChange={handlePickerChange} />
+          </Box>
+        </Popover>
       </div>
     </div>
   );
@@ -203,8 +243,16 @@ export default function WheelEditor() {
     parsedConfig.segmentTextColors || {},
   );
   const [config, setConfig] = useState({
-    style: parsedConfig.style || "classic",
-    effect: parsedConfig.effect || "default",
+    style: getValidOptionValue(
+      WHEEL_STYLE_OPTIONS,
+      parsedConfig.style,
+      "default",
+    ),
+    effect: getValidOptionValue(
+      EFFECT_OPTIONS,
+      parsedConfig.effect,
+      "default",
+    ),
     popupBehavior: parsedConfig.popupBehavior || "default",
     title: parsedConfig.title || "Spin & Win!",
     description:
@@ -286,7 +334,8 @@ export default function WheelEditor() {
         },
       ]}
     >
-      <Layout>
+      <div className="WheelEditorLayout">
+        <Layout>
         {totalProbability !== 100 && (
           <Layout.Section>
             <Banner tone="warning">
@@ -351,83 +400,98 @@ export default function WheelEditor() {
                 </InlineStack>
               </Box>
 
-              {colorsOpen && (
-                <>
+              <div
+                style={{
+                  maxHeight: colorsOpen ? "2200px" : "0px",
+                  overflow: colorsOpen ? "visible" : "hidden",
+                  opacity: colorsOpen ? 1 : 0,
+                  transitionDuration: "500ms",
+                  transitionTimingFunction: "ease-in-out",
+                  transitionProperty: "max-height, opacity",
+                  pointerEvents: colorsOpen ? "auto" : "none",
+                }}
+              >
+                <Box padding="400" paddingBlockStart="0">
+                  <InlineGrid columns={3} gap="300">
+                    <ColorField
+                      label="Background"
+                      value={config.backgroundColor}
+                      fallback="#fff8f0"
+                      onChange={(value) =>
+                        handleConfigChange("backgroundColor", normalizeHex(value, "#fff8f0"))
+                      }
+                    />
+                    <ColorField
+                      label="Heading"
+                      value={config.headingColor}
+                      fallback="#8b4513"
+                      onChange={(value) =>
+                        handleConfigChange("headingColor", normalizeHex(value, "#8b4513"))
+                      }
+                    />
+                    <ColorField
+                      label="Text"
+                      value={config.textColor}
+                      fallback="#3e2723"
+                      onChange={(value) =>
+                        handleConfigChange("textColor", normalizeHex(value, "#3e2723"))
+                      }
+                    />
+                    <ColorField
+                      label="Button background"
+                      value={config.buttonBackgroundColor}
+                      fallback="#d2691e"
+                      onChange={(value) =>
+                        handleConfigChange(
+                          "buttonBackgroundColor",
+                          normalizeHex(value, "#d2691e"),
+                        )
+                      }
+                    />
+                    <ColorField
+                      label="Button text"
+                      value={config.buttonTextColor}
+                      fallback="#ffffff"
+                      onChange={(value) =>
+                        handleConfigChange("buttonTextColor", normalizeHex(value, "#ffffff"))
+                      }
+                    />
+                  </InlineGrid>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border">
+                  <Box padding="400" paddingBlockEnd="200">
+                    <Text variant="headingSm" as="h3" fontWeight="semibold">
+                      Wheel colors
+                    </Text>
+                  </Box>
+
                   <Box padding="400" paddingBlockStart="0">
-                    <InlineGrid columns={3} gap="300">
-                      <ColorField
-                        label="Background"
-                        value={config.backgroundColor}
-                        onChange={(value) =>
-                          handleConfigChange("backgroundColor", normalizeHex(value, "#fff8f0"))
-                        }
-                      />
-                      <ColorField
-                        label="Heading"
-                        value={config.headingColor}
-                        onChange={(value) =>
-                          handleConfigChange("headingColor", normalizeHex(value, "#8b4513"))
-                        }
-                      />
-                      <ColorField
-                        label="Text"
-                        value={config.textColor}
-                        onChange={(value) =>
-                          handleConfigChange("textColor", normalizeHex(value, "#3e2723"))
-                        }
-                      />
-                      <ColorField
-                        label="Button background"
-                        value={config.buttonBackgroundColor}
-                        onChange={(value) =>
-                          handleConfigChange(
-                            "buttonBackgroundColor",
-                            normalizeHex(value, "#d2691e"),
-                          )
-                        }
-                      />
-                      <ColorField
-                        label="Button text"
-                        value={config.buttonTextColor}
-                        onChange={(value) =>
-                          handleConfigChange("buttonTextColor", normalizeHex(value, "#ffffff"))
-                        }
-                      />
+                    <InlineGrid columns={2} gap="300">
+                      {segments.map((segment, index) => (
+                        <div key={segment.id}>
+                          <ColorField
+                            label={`Slice ${index + 1} background`}
+                            value={segment.color}
+                            fallback="#f6b347"
+                            onChange={(value) => handleSegmentColorChange(index, value)}
+                          />
+                          <div style={{ marginTop: "10px" }}>
+                            <ColorField
+                              label={`Slice ${index + 1} text`}
+                              value={segmentTextColors[segment.id] || config.wheelTextColor}
+                              fallback="#4a1e00"
+                              onChange={(value) =>
+                                handleSegmentTextColorChange(segment.id, value)
+                              }
+                            />
+                          </div>
+                        </div>
+                      ))}
                     </InlineGrid>
                   </Box>
-
-                  <Box borderBlockStartWidth="025" borderColor="border">
-                    <Box padding="400" paddingBlockEnd="200">
-                      <Text variant="headingSm" as="h3" fontWeight="semibold">
-                        Wheel colors
-                      </Text>
-                    </Box>
-
-                    <Box padding="400" paddingBlockStart="0">
-                      <InlineGrid columns={2} gap="300">
-                        {segments.map((segment, index) => (
-                          <div key={segment.id}>
-                            <ColorField
-                              label={`Slice ${index + 1} background`}
-                              value={segment.color}
-                              onChange={(value) => handleSegmentColorChange(index, value)}
-                            />
-                            <div style={{ marginTop: "10px" }}>
-                              <ColorField
-                                label={`Slice ${index + 1} text`}
-                                value={segmentTextColors[segment.id] || config.wheelTextColor}
-                                onChange={(value) =>
-                                  handleSegmentTextColorChange(segment.id, value)
-                                }
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </InlineGrid>
-                    </Box>
-                  </Box>
-                </>
-              )}
+                </Box>
+              </div>
             </Card>
 
             <Card>
@@ -447,7 +511,7 @@ export default function WheelEditor() {
         </Layout.Section>
 
         <Layout.Section variant="oneThird">
-          <BlockStack gap="400">
+            <BlockStack gap="400">
             <Card>
               <BlockStack gap="300">
                 <InlineStack align="space-between" blockAlign="center">
@@ -480,50 +544,67 @@ export default function WheelEditor() {
                   <Text variant="headingMd" as="h2" fontWeight="bold">
                     Preview
                   </Text>
-                  <InlineStack gap="100">
-                    <Button
-                      size="slim"
-                      variant={previewDevice === "mobile" ? "primary" : "secondary"}
-                      onClick={() => setPreviewDevice("mobile")}
-                    >
-                      Mobile
-                    </Button>
-                    <Button
-                      size="slim"
-                      variant={previewDevice === "desktop" ? "primary" : "secondary"}
-                      onClick={() => setPreviewDevice("desktop")}
-                    >
-                      Desktop
-                    </Button>
-                  </InlineStack>
-                </InlineStack>
-
-                <div
-                  style={{
-                    marginTop: "12px",
-                    display: "flex",
-                    gap: "8px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {PREVIEW_TABS.map((tab) => (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      border: "1px solid #d2d5d8",
+                      borderRadius: "10px",
+                      overflow: "hidden",
+                      background: "#fff",
+                    }}
+                  >
                     <button
-                      key={tab.value}
                       type="button"
-                      onClick={() => setPreviewTab(tab.value)}
+                      onClick={() => setPreviewDevice("mobile")}
                       style={{
-                        border: "1px solid #d1d5db",
-                        borderRadius: "999px",
-                        padding: "6px 12px",
-                        background: previewTab === tab.value ? "#f1f1f1" : "#fff",
-                        fontWeight: previewTab === tab.value ? 600 : 500,
+                        border: "none",
+                        borderRight: "1px solid #d2d5d8",
+                        background: previewDevice === "mobile" ? "#303030" : "transparent",
+                        color: previewDevice === "mobile" ? "#fff" : "#303030",
+                        width: "30px",
+                        height: "30px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                         cursor: "pointer",
                       }}
+                      aria-label="Mobile preview"
+                    >
+                      <Icon source={MobileIcon} tone={previewDevice === "mobile" ? "inherit" : "base"} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDevice("desktop")}
+                      style={{
+                        border: "none",
+                        background: previewDevice === "desktop" ? "#303030" : "transparent",
+                        color: previewDevice === "desktop" ? "#fff" : "#303030",
+                        width: "30px",
+                        height: "30px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                      }}
+                      aria-label="Desktop preview"
+                    >
+                      <Icon source={DesktopIcon} tone={previewDevice === "desktop" ? "inherit" : "base"} />
+                    </button>
+                  </div>
+                </InlineStack>
+
+                <InlineStack gap="200">
+                  {PREVIEW_TABS.map((tab) => (
+                    <Button
+                      key={tab.value}
+                      size="slim"
+                      variant={previewTab === tab.value ? "secondary" : "tertiary"}
+                      onClick={() => setPreviewTab(tab.value)}
                     >
                       {tab.label}
-                    </button>
+                    </Button>
                   ))}
-                </div>
+                </InlineStack>
               </Box>
 
               <Box
@@ -535,7 +616,7 @@ export default function WheelEditor() {
                 <div
                   style={{
                     margin: "0 auto",
-                    maxWidth: previewDevice === "mobile" ? "320px" : "460px",
+                    maxWidth: previewDevice === "mobile" ? "300px" : "520px",
                     background: config.backgroundColor,
                     borderRadius: "16px",
                     border: "1px solid #e3e3e3",
@@ -559,8 +640,8 @@ export default function WheelEditor() {
                     <div
                       style={{
                         margin: "8px auto 0",
-                        width: previewDevice === "mobile" ? "250px" : "290px",
-                        height: previewDevice === "mobile" ? "250px" : "290px",
+                        width: previewDevice === "mobile" ? "220px" : "250px",
+                        height: previewDevice === "mobile" ? "220px" : "250px",
                         borderRadius: "50%",
                         border: "6px solid #f1ad46",
                         background: wheelGradient,
@@ -661,9 +742,10 @@ export default function WheelEditor() {
                 </div>
               </Box>
             </Card>
-          </BlockStack>
+            </BlockStack>
         </Layout.Section>
-      </Layout>
+        </Layout>
+      </div>
     </Page>
   );
 }

@@ -2,3 +2,16 @@
 .Polaris-EmptyState__Image img {
   opacity: 1 !important;
 }
+
+.WheelEditorLayout .Polaris-Layout__Section--oneThird {
+  position: sticky;
+  top: 16px;
+  align-self: flex-start;
+}
+
+@media (max-width: 48rem) {
+  .WheelEditorLayout .Polaris-Layout__Section--oneThird {
+    position: static;
+    top: auto;
+  }
+}
