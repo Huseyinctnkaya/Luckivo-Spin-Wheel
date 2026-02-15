@@ -53,6 +53,45 @@ const POPUP_BEHAVIOR_OPTIONS = [
   { label: "Spin first, reveal form later", value: "spin_first" },
 ];
 
+const TRIGGER_CONDITION_OPTIONS = [
+  { label: "Show immediately", value: "show_immediately" },
+  { label: "After delay", value: "after_delay" },
+  { label: "On exit intent", value: "on_exit_intent" },
+  { label: "After scroll", value: "after_scroll" },
+];
+
+const DISPLAY_ON_OPTIONS = [
+  { label: "All pages", value: "all_pages" },
+  { label: "Homepage only", value: "homepage_only" },
+  { label: "Product pages", value: "product_pages" },
+  { label: "Cart page", value: "cart_page" },
+];
+
+const DISPLAY_DAYS_OPTIONS = [
+  { label: "Every day", value: "every_day" },
+  { label: "Weekdays", value: "weekdays" },
+  { label: "Weekends", value: "weekends" },
+];
+
+const DISCOUNT_ACTIVATION_TIME_OPTIONS = [
+  { label: "Immediately", value: "immediately" },
+  { label: "After 5 minutes", value: "after_5_minutes" },
+  { label: "After 1 hour", value: "after_1_hour" },
+];
+
+const DISCOUNT_CODE_EXPIRATION_OPTIONS = [
+  { label: "Never", value: "never" },
+  { label: "In 24 hours", value: "in_24_hours" },
+  { label: "In 3 days", value: "in_3_days" },
+  { label: "In 7 days", value: "in_7_days" },
+];
+
+const SPIN_FREQUENCY_OPTIONS = [
+  { label: "One time only", value: "one_time_only" },
+  { label: "Once per day", value: "once_per_day" },
+  { label: "Every visit", value: "every_visit" },
+];
+
 const PREVIEW_TABS = [
   { label: "Initial", value: "initial" },
   { label: "Result", value: "result" },
@@ -309,6 +348,7 @@ export default function WheelEditor() {
   const [previewTab, setPreviewTab] = useState("initial");
   const [previewDevice, setPreviewDevice] = useState("mobile");
   const [colorsOpen, setColorsOpen] = useState(true);
+  const [popupRulesOpen, setPopupRulesOpen] = useState(true);
   const [discountsOpen, setDiscountsOpen] = useState(true);
   const [segmentTextColors, setSegmentTextColors] = useState(
     parsedConfig.segmentTextColors || {},
@@ -325,6 +365,39 @@ export default function WheelEditor() {
       "default",
     ),
     popupBehavior: parsedConfig.popupBehavior || "default",
+    triggerCondition: getValidOptionValue(
+      TRIGGER_CONDITION_OPTIONS,
+      parsedConfig.triggerCondition,
+      "show_immediately",
+    ),
+    displayOn: getValidOptionValue(
+      DISPLAY_ON_OPTIONS,
+      parsedConfig.displayOn,
+      "all_pages",
+    ),
+    displayOnDays: getValidOptionValue(
+      DISPLAY_DAYS_OPTIONS,
+      parsedConfig.displayOnDays,
+      "every_day",
+    ),
+    hideOnMobileDevices: Boolean(parsedConfig.hideOnMobileDevices),
+    discountActivationTime: getValidOptionValue(
+      DISCOUNT_ACTIVATION_TIME_OPTIONS,
+      parsedConfig.discountActivationTime,
+      "immediately",
+    ),
+    discountCodeExpiration: getValidOptionValue(
+      DISCOUNT_CODE_EXPIRATION_OPTIONS,
+      parsedConfig.discountCodeExpiration,
+      "never",
+    ),
+    spinFrequency: getValidOptionValue(
+      SPIN_FREQUENCY_OPTIONS,
+      parsedConfig.spinFrequency,
+      "one_time_only",
+    ),
+    showSideTriggerButton: Boolean(parsedConfig.showSideTriggerButton),
+    showCountdownAfterReveal: Boolean(parsedConfig.showCountdownAfterReveal),
     title: parsedConfig.title || "Spin & Win!",
     description:
       parsedConfig.description ||
@@ -706,6 +779,130 @@ export default function WheelEditor() {
                   helpText="Choose how the spin wheel interaction works"
                 />
               </BlockStack>
+            </Card>
+
+            <Card padding="0">
+              <Box padding="400">
+                <InlineStack align="space-between" blockAlign="center">
+                  <div>
+                    <Text variant="headingMd" as="h2" fontWeight="bold">
+                      Popup Display Rules
+                    </Text>
+                    <Text as="p" tone="subdued">
+                      Adjust the rules for when the popup should be displayed
+                    </Text>
+                  </div>
+                  <Button
+                    variant="plain"
+                    icon={popupRulesOpen ? ChevronUpIcon : ChevronDownIcon}
+                    onClick={() => setPopupRulesOpen((open) => !open)}
+                    accessibilityLabel="Toggle popup rules section"
+                  />
+                </InlineStack>
+              </Box>
+
+              <div
+                style={{
+                  maxHeight: popupRulesOpen ? "1800px" : "0px",
+                  overflow: popupRulesOpen ? "visible" : "hidden",
+                  opacity: popupRulesOpen ? 1 : 0,
+                  transitionDuration: "500ms",
+                  transitionTimingFunction: "ease-in-out",
+                  transitionProperty: "max-height, opacity",
+                  pointerEvents: popupRulesOpen ? "auto" : "none",
+                }}
+              >
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <BlockStack gap="300">
+                    <Select
+                      label="Trigger condition"
+                      options={TRIGGER_CONDITION_OPTIONS}
+                      value={config.triggerCondition}
+                      onChange={(value) => handleConfigChange("triggerCondition", value)}
+                    />
+                    <Select
+                      label="Display on"
+                      options={DISPLAY_ON_OPTIONS}
+                      value={config.displayOn}
+                      onChange={(value) => handleConfigChange("displayOn", value)}
+                    />
+                    <Select
+                      label="Display on days"
+                      options={DISPLAY_DAYS_OPTIONS}
+                      value={config.displayOnDays}
+                      onChange={(value) => handleConfigChange("displayOnDays", value)}
+                    />
+                    <Checkbox
+                      label="Hide on mobile devices"
+                      checked={config.hideOnMobileDevices}
+                      onChange={(checked) => handleConfigChange("hideOnMobileDevices", checked)}
+                    />
+                  </BlockStack>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <BlockStack gap="300">
+                    <InlineGrid columns={2} gap="300">
+                      <Select
+                        label="Discount activation time"
+                        options={DISCOUNT_ACTIVATION_TIME_OPTIONS}
+                        value={config.discountActivationTime}
+                        onChange={(value) =>
+                          handleConfigChange("discountActivationTime", value)
+                        }
+                        helpText="When the discount code becomes active"
+                      />
+                      <Select
+                        label="Discount code expiration"
+                        options={DISCOUNT_CODE_EXPIRATION_OPTIONS}
+                        value={config.discountCodeExpiration}
+                        onChange={(value) =>
+                          handleConfigChange("discountCodeExpiration", value)
+                        }
+                        helpText="When the discount code expires"
+                      />
+                    </InlineGrid>
+
+                    <Select
+                      label="Spin frequency"
+                      options={SPIN_FREQUENCY_OPTIONS}
+                      value={config.spinFrequency}
+                      onChange={(value) => handleConfigChange("spinFrequency", value)}
+                    />
+                  </BlockStack>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="p">Show trigger button on the side of the screen</Text>
+                    <Checkbox
+                      labelHidden
+                      label="Show trigger button on the side of the screen"
+                      checked={config.showSideTriggerButton}
+                      onChange={(checked) =>
+                        handleConfigChange("showSideTriggerButton", checked)
+                      }
+                    />
+                  </InlineStack>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <InlineStack gap="200" blockAlign="center">
+                      <Text as="p">Show countdown timer after discount is revealed</Text>
+                      <Badge tone="info">New</Badge>
+                    </InlineStack>
+                    <Checkbox
+                      labelHidden
+                      label="Show countdown timer after discount is revealed"
+                      checked={config.showCountdownAfterReveal}
+                      onChange={(checked) =>
+                        handleConfigChange("showCountdownAfterReveal", checked)
+                      }
+                    />
+                  </InlineStack>
+                </Box>
+              </div>
             </Card>
 
             <Card padding="0">
