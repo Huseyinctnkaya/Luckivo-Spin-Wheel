@@ -1,5 +1,5 @@
-import { json } from "@remix-run/node";
-import { useLoaderData, useNavigate } from "@remix-run/react";
+import { json, redirect } from "@remix-run/node";
+import { useLoaderData, useSubmit } from "@remix-run/react";
 import {
   Page,
   Card,
@@ -83,18 +83,92 @@ export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const wheels = await db.wheel.findMany({
     where: { shop: session.shop },
-    include: {
-      _count: { select: { spins: true, impressions: true } },
-    },
     orderBy: { createdAt: "desc" },
   });
 
   return json({ wheels });
 };
 
+export const action = async ({ request }) => {
+  const { session } = await authenticate.admin(request);
+  const formData = await request.formData();
+
+  const intent = formData.get("intent");
+
+  if (intent === "createFromTemplate") {
+    const templateId = formData.get("templateId");
+    const template = TEMPLATES.find((item) => item.id === templateId);
+
+    if (!template) {
+      return json({ error: "Template not found." }, { status: 404 });
+    }
+
+    await db.wheel.create({
+      data: {
+        shop: session.shop,
+        title: template.name,
+        isActive: false,
+        config: JSON.stringify(template.config),
+        segments: {
+          create: template.segments.map((segment) => ({
+            label: segment.label,
+            value: segment.value,
+            probability: segment.probability,
+            color: segment.color,
+          })),
+        },
+      },
+    });
+
+    return redirect("/app/wheels");
+  }
+
+  const wheelId = formData.get("wheelId");
+
+  if (typeof wheelId !== "string" || wheelId.length === 0) {
+    return json({ error: "Missing wheel id." }, { status: 400 });
+  }
+
+  const wheel = await db.wheel.findFirst({
+    where: { id: wheelId, shop: session.shop },
+    include: { segments: true },
+  });
+
+  if (!wheel) {
+    return json({ error: "Campaign not found." }, { status: 404 });
+  }
+
+  if (intent === "delete") {
+    await db.wheel.delete({ where: { id: wheel.id } });
+    return redirect("/app/wheels");
+  }
+
+  if (intent === "duplicate") {
+    await db.wheel.create({
+      data: {
+        shop: session.shop,
+        title: `${wheel.title} Copy`,
+        isActive: false,
+        config: wheel.config,
+        segments: {
+          create: wheel.segments.map((segment) => ({
+            label: segment.label,
+            value: segment.value,
+            probability: segment.probability,
+            color: segment.color,
+          })),
+        },
+      },
+    });
+    return redirect("/app/wheels");
+  }
+
+  return json({ error: "Unknown intent." }, { status: 400 });
+};
+
 export default function CampaignsPage() {
   const { wheels } = useLoaderData();
-  const navigate = useNavigate();
+  const submit = useSubmit();
   const [filter, setFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -103,7 +177,7 @@ export default function CampaignsPage() {
 
   const handleSelectTemplate = (templateId) => {
     setModalOpen(false);
-    navigate(`/app/wheels/new?template=${templateId}`);
+    submit({ intent: "createFromTemplate", templateId }, { method: "post" });
   };
 
   const filtered =
@@ -192,12 +266,9 @@ export default function CampaignsPage() {
               resourceName={{ singular: "campaign", plural: "campaigns" }}
               itemCount={filtered.length}
               headings={[
-                { title: "Campaign" },
+                { title: "Name" },
                 { title: "Status" },
-                { title: "Impressions", alignment: "end" },
-                { title: "Spins", alignment: "end" },
-                { title: "Created" },
-                { title: "Actions" },
+                { title: "Actions", alignment: "end" },
               ]}
               selectable={false}
             >
@@ -216,28 +287,34 @@ export default function CampaignsPage() {
                     )}
                   </IndexTable.Cell>
                   <IndexTable.Cell>
-                    <Text as="span" alignment="end" variant="bodyMd">
-                      {wheel._count.impressions}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Text as="span" alignment="end" variant="bodyMd">
-                      {wheel._count.spins}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" tone="subdued">
-                      {new Date(wheel.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Button url={`/app/wheels/${wheel.id}`} variant="plain">
-                      Edit
-                    </Button>
+                    <InlineStack align="end" gap="200">
+                      <Button url={`/app/wheels/${wheel.id}`} size="slim">
+                        Edit
+                      </Button>
+                      <Button
+                        size="slim"
+                        onClick={() =>
+                          submit(
+                            { intent: "duplicate", wheelId: wheel.id },
+                            { method: "post" },
+                          )
+                        }
+                      >
+                        Duplicate
+                      </Button>
+                      <Button
+                        size="slim"
+                        tone="critical"
+                        onClick={() =>
+                          submit(
+                            { intent: "delete", wheelId: wheel.id },
+                            { method: "post" },
+                          )
+                        }
+                      >
+                        Delete
+                      </Button>
+                    </InlineStack>
                   </IndexTable.Cell>
                 </IndexTable.Row>
               ))}
