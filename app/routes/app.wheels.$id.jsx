@@ -1028,6 +1028,11 @@ export default function WheelEditor() {
     closeDiscountEditor();
   };
 
+  const handleClosePreviewModal = () => {
+    setPreviewModalOpen(false);
+    setPreviewDevice("mobile");
+  };
+
   const renderWheelPreview = ({ wheelSize, labelFontSize, labelWidth }) => (
     <div
       style={{
@@ -1080,16 +1085,28 @@ export default function WheelEditor() {
       <div
         style={{
           position: "absolute",
-          right: "-18px",
+          right: "-24px",
           top: "50%",
           transform: "translateY(-50%)",
-          width: "22px",
-          height: "22px",
-          borderRadius: "50%",
-          border: "4px solid #f1ad46",
-          background: "#fff",
+          width: "34px",
+          height: "24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none",
         }}
-      />
+      >
+        <svg width="34" height="24" viewBox="0 0 34 24" fill="none" aria-hidden="true">
+          <path
+            d="M2 12L9.5 5C11.8 2.8 14.9 1.5 18.1 1.5C24.6 1.5 30 6.9 30 13.4C30 18.9 25.5 22.5 20 22.5C15.7 22.5 11.6 20.7 8.9 17.9L2 12Z"
+            fill="#ffffff"
+            stroke="#f1ad46"
+            strokeWidth="4"
+            strokeLinejoin="round"
+          />
+          <circle cx="19.5" cy="12.5" r="4.2" fill="#ffffff" />
+        </svg>
+      </div>
       <div
         style={{
           position: "absolute",
@@ -1327,8 +1344,10 @@ export default function WheelEditor() {
             <div
               style={{
                 position: "relative",
-                width: "100%",
-                height: previewDevice === "mobile" ? "360px" : inModal ? "500px" : "440px",
+                width: previewDevice === "mobile" ? "100%" : inModal ? "620px" : "100%",
+                maxWidth: "100%",
+                margin: "0 auto",
+                height: previewDevice === "mobile" ? "360px" : inModal ? "300px" : "440px",
                 border: "1px solid #a7a7a7",
                 borderRadius: "2px",
                 background: "#f6f6f7",
@@ -1413,7 +1432,7 @@ export default function WheelEditor() {
               style={{
                 position: "relative",
                 width: "100%",
-                height: previewDevice === "mobile" ? "360px" : inModal ? "500px" : "440px",
+                height: previewDevice === "mobile" ? "360px" : inModal ? "300px" : "440px",
                 border: "1px solid #a7a7a7",
                 borderRadius: "2px",
                 background: "#f6f6f7",
@@ -2463,7 +2482,7 @@ export default function WheelEditor() {
 
       <Modal
         open={previewModalOpen}
-        onClose={() => setPreviewModalOpen(false)}
+        onClose={handleClosePreviewModal}
         title="Preview"
         size="large"
       >

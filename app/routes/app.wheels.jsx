@@ -23,6 +23,126 @@ import db from "../db.server";
 import { useState, useCallback } from "react";
 import { WHEEL_TEMPLATES } from "../data/wheel-templates";
 
+function buildTemplateWheelGradient(segments) {
+  if (!Array.isArray(segments) || segments.length === 0) {
+    return "conic-gradient(#f3f3f3 0deg 360deg)";
+  }
+
+  const total = segments.reduce((sum, segment) => {
+    const probability = Number(segment?.probability || 0);
+    return sum + (Number.isFinite(probability) ? probability : 0);
+  }, 0);
+
+  const parts = [];
+  let cursor = 0;
+
+  segments.forEach((segment) => {
+    const probability = Number(segment?.probability || 0);
+    const ratio = total > 0 ? probability / total : 1 / segments.length;
+    const sweep = ratio * 360;
+    const start = cursor;
+    const end = cursor + sweep;
+    const color = segment?.color || "#f6b347";
+    parts.push(`${color} ${start}deg ${end}deg`);
+    cursor = end;
+  });
+
+  return `conic-gradient(${parts.join(", ")})`;
+}
+
+function TemplatePreview({ template }) {
+  const gradient = buildTemplateWheelGradient(template?.segments);
+  const backgroundColor = template?.config?.backgroundColor || "#f6f6f7";
+  const headingColor = template?.config?.textColor || "#2d3436";
+  const buttonColor =
+    template?.config?.buttonBackgroundColor || template?.config?.primaryColor || "#303030";
+  const buttonTextColor = template?.config?.buttonTextColor || "#ffffff";
+  const title = String(template?.config?.title || template?.name || "Wheel").slice(0, 24);
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        boxSizing: "border-box",
+        padding: "12px",
+        background: backgroundColor,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <Text as="p" variant="bodySm" fontWeight="semibold">
+        <span style={{ color: headingColor }}>{title}</span>
+      </Text>
+
+      <div
+        style={{
+          width: "112px",
+          height: "112px",
+          borderRadius: "50%",
+          border: "4px solid #f1ad46",
+          background: gradient,
+          position: "relative",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            right: "-10px",
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: "12px",
+            height: "12px",
+            borderRadius: "50%",
+            border: "3px solid #f1ad46",
+            background: "#fff",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "30px",
+            height: "30px",
+            borderRadius: "50%",
+            border: "3px solid #fff",
+            background: template?.config?.primaryColor || "#6C5CE7",
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "8px",
+            fontWeight: 700,
+          }}
+        >
+          SPIN
+        </div>
+      </div>
+
+      <div
+        style={{
+          width: "100%",
+          borderRadius: "6px",
+          background: buttonColor,
+          color: buttonTextColor,
+          textAlign: "center",
+          fontSize: "10px",
+          fontWeight: 700,
+          padding: "5px 8px",
+          boxSizing: "border-box",
+        }}
+      >
+        {template?.config?.ctaText || "SPIN NOW"}
+      </div>
+    </div>
+  );
+}
+
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const wheels = await db.wheel.findMany({
@@ -306,7 +426,7 @@ export default function WheelsPage() {
                 <div
                   style={{
                     width: "100%",
-                    height: "180px",
+                    height: "220px",
                     background: "#f6f6f7",
                     display: "flex",
                     alignItems: "center",
@@ -325,9 +445,7 @@ export default function WheelsPage() {
                       }}
                     />
                   ) : (
-                    <Text tone="subdued" variant="bodySm">
-                      Preview
-                    </Text>
+                    <TemplatePreview template={template} />
                   )}
                 </div>
                 {/* Footer */}
