@@ -436,6 +436,12 @@ export default function WheelEditor() {
       maximumWinners: String(savedSettings.maximumWinners ?? "10"),
       currentWinners: String(savedSettings.currentWinners ?? "0"),
       customWinScreen: Boolean(savedSettings.customWinScreen),
+      winScreenHeading: String(savedSettings.winScreenHeading ?? "Congrats! You won"),
+      winScreenDescription: String(
+        savedSettings.winScreenDescription ?? "Enjoy your reward and redeem it at checkout.",
+      ),
+      ctaButtonLabel: String(savedSettings.ctaButtonLabel ?? "Shop now"),
+      ctaButtonUrl: String(savedSettings.ctaButtonUrl ?? "https://yourstore.com/collections/new"),
       combineOrderDiscounts: Boolean(savedSettings.combineOrderDiscounts),
       combineProductDiscounts: Boolean(savedSettings.combineProductDiscounts),
       combineShippingDiscounts: Boolean(savedSettings.combineShippingDiscounts),
@@ -486,6 +492,10 @@ export default function WheelEditor() {
             maximumWinners: discountDraft.maximumWinners,
             currentWinners: discountDraft.currentWinners,
             customWinScreen: discountDraft.customWinScreen,
+            winScreenHeading: discountDraft.winScreenHeading,
+            winScreenDescription: discountDraft.winScreenDescription,
+            ctaButtonLabel: discountDraft.ctaButtonLabel,
+            ctaButtonUrl: discountDraft.ctaButtonUrl,
             combineOrderDiscounts: discountDraft.combineOrderDiscounts,
             combineProductDiscounts: discountDraft.combineProductDiscounts,
             combineShippingDiscounts: discountDraft.combineShippingDiscounts,
@@ -546,6 +556,10 @@ export default function WheelEditor() {
           maximumWinners: "10",
           currentWinners: "0",
           customWinScreen: false,
+          winScreenHeading: "Congrats! You won",
+          winScreenDescription: "Enjoy your reward and redeem it at checkout.",
+          ctaButtonLabel: "Shop now",
+          ctaButtonUrl: "https://yourstore.com/collections/new",
           combineOrderDiscounts: false,
           combineProductDiscounts: false,
           combineShippingDiscounts: false,
@@ -562,6 +576,10 @@ export default function WheelEditor() {
       maximumWinners: "10",
       currentWinners: "0",
       customWinScreen: false,
+      winScreenHeading: "Congrats! You won",
+      winScreenDescription: "Enjoy your reward and redeem it at checkout.",
+      ctaButtonLabel: "Shop now",
+      ctaButtonUrl: "https://yourstore.com/collections/new",
       combineOrderDiscounts: false,
       combineProductDiscounts: false,
       combineShippingDiscounts: false,
@@ -1179,8 +1197,11 @@ export default function WheelEditor() {
                       const radiusPercent = previewDevice === "mobile" ? 33 : 35;
                       const x = 50 + radiusPercent * Math.sin(theta);
                       const y = 50 - radiusPercent * Math.cos(theta);
-                      const shortLabel =
-                        slice.label.length > 14 ? `${slice.label.slice(0, 14)}...` : slice.label;
+                      const normalizedAngle = ((slice.angle % 360) + 360) % 360;
+                      const textRotation =
+                        normalizedAngle > 90 && normalizedAngle < 270
+                          ? slice.angle + 180
+                          : slice.angle;
 
                       return (
                         <div
@@ -1189,18 +1210,20 @@ export default function WheelEditor() {
                             position: "absolute",
                             left: `${x}%`,
                             top: `${y}%`,
-                            transform: "translate(-50%, -50%)",
+                            transform: `translate(-50%, -50%) rotate(${textRotation}deg)`,
                             color: slice.color,
                             fontWeight: 700,
                             fontSize: previewDevice === "mobile" ? "10px" : "11px",
                             lineHeight: 1.1,
                             textAlign: "center",
-                            width: previewDevice === "mobile" ? "58px" : "68px",
+                            width: previewDevice === "mobile" ? "44px" : "52px",
                             pointerEvents: "none",
+                            whiteSpace: "normal",
+                            overflowWrap: "break-word",
                             textShadow: "0 1px 0 rgba(255,255,255,0.45)",
                           }}
                         >
-                          {shortLabel}
+                          {slice.label}
                         </div>
                       );
                     })}
@@ -1414,7 +1437,7 @@ export default function WheelEditor() {
                 </Text>
               </Box>
 
-              <BlockStack gap="100">
+              <BlockStack gap="200">
                 <Checkbox
                   label="Use custom win screen for this discount"
                   checked={discountDraft.customWinScreen}
@@ -1425,6 +1448,40 @@ export default function WheelEditor() {
                     When enabled, shoppers will see a custom win screen after winning this prize.
                   </Text>
                 </Box>
+
+                {discountDraft.customWinScreen ? (
+                  <>
+                    <TextField
+                      label="Win screen heading"
+                      value={discountDraft.winScreenHeading}
+                      onChange={(value) => handleDiscountDraftChange("winScreenHeading", value)}
+                      autoComplete="off"
+                    />
+                    <TextField
+                      label="Win screen description"
+                      value={discountDraft.winScreenDescription}
+                      onChange={(value) =>
+                        handleDiscountDraftChange("winScreenDescription", value)
+                      }
+                      autoComplete="off"
+                      multiline={4}
+                    />
+                    <InlineGrid columns={2} gap="300">
+                      <TextField
+                        label="CTA button label"
+                        value={discountDraft.ctaButtonLabel}
+                        onChange={(value) => handleDiscountDraftChange("ctaButtonLabel", value)}
+                        autoComplete="off"
+                      />
+                      <TextField
+                        label="CTA button URL"
+                        value={discountDraft.ctaButtonUrl}
+                        onChange={(value) => handleDiscountDraftChange("ctaButtonUrl", value)}
+                        autoComplete="off"
+                      />
+                    </InlineGrid>
+                  </>
+                ) : null}
               </BlockStack>
 
               <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
