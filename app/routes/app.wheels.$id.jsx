@@ -617,127 +617,107 @@ export default function WheelEditor() {
                   style={{
                     margin: "0 auto",
                     maxWidth: previewDevice === "mobile" ? "300px" : "520px",
-                    background: config.backgroundColor,
-                    borderRadius: "16px",
-                    border: "1px solid #e3e3e3",
-                    padding: "18px",
-                    boxSizing: "border-box",
+                    textAlign: "center",
+                    padding: "8px 0",
                   }}
                 >
                   <div
                     style={{
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      color: config.textColor,
-                      fontSize: "22px",
-                      lineHeight: 1,
+                      margin: "8px auto 0",
+                      width: previewDevice === "mobile" ? "220px" : "250px",
+                      height: previewDevice === "mobile" ? "220px" : "250px",
+                      borderRadius: "50%",
+                      border: "6px solid #f1ad46",
+                      background: wheelGradient,
+                      position: "relative",
                     }}
                   >
-                    ×
-                  </div>
-
-                  <div style={{ textAlign: "center" }}>
                     <div
                       style={{
-                        margin: "8px auto 0",
-                        width: previewDevice === "mobile" ? "220px" : "250px",
-                        height: previewDevice === "mobile" ? "220px" : "250px",
+                        position: "absolute",
+                        right: "-18px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        width: "22px",
+                        height: "22px",
                         borderRadius: "50%",
-                        border: "6px solid #f1ad46",
-                        background: wheelGradient,
-                        position: "relative",
+                        border: "4px solid #f1ad46",
+                        background: "#fff",
                       }}
-                    >
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: "-18px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          width: "22px",
-                          height: "22px",
-                          borderRadius: "50%",
-                          border: "4px solid #f1ad46",
-                          background: "#fff",
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "50%",
-                          left: "50%",
-                          transform: "translate(-50%, -50%)",
-                          width: "74px",
-                          height: "74px",
-                          borderRadius: "50%",
-                          background: config.wheelCenterColor,
-                          border: "4px solid #ffffff",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: config.wheelTextColor,
-                          fontWeight: 700,
-                          fontSize: "16px",
-                        }}
-                      >
-                        SPIN
-                      </div>
-                    </div>
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: "74px",
+                        height: "74px",
+                        borderRadius: "50%",
+                        background: config.wheelCenterColor,
+                        border: "4px solid #ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: config.wheelTextColor,
+                        fontWeight: 700,
+                        fontSize: "16px",
+                      }}
+                  >
+                    SPIN
+                  </div>
+                  </div>
 
-                    <Text
-                      as="h3"
-                      variant="headingLg"
-                      fontWeight="bold"
-                      tone="base"
-                    >
+                  <div style={{ marginTop: "14px" }}>
+                    <Text as="h3" variant="headingLg" fontWeight="bold" tone="base">
                       <span style={{ color: config.headingColor }}>{config.title}</span>
                     </Text>
+                  </div>
 
-                    <div style={{ marginTop: "6px" }}>
-                      <Text as="p" tone="subdued">
-                        <span style={{ color: config.textColor }}>
-                          {previewTab === "initial"
-                            ? config.description
-                            : previewTab === "result"
-                              ? "Congratulations! You unlocked a reward."
-                              : previewTab === "side_button"
-                                ? "Side button mode preview."
-                                : "Countdown mode preview."}
-                        </span>
-                      </Text>
-                    </div>
+                  <div style={{ marginTop: "6px" }}>
+                    <Text as="p" tone="subdued">
+                      <span style={{ color: config.textColor }}>
+                        {previewTab === "initial"
+                          ? config.description
+                          : previewTab === "result"
+                            ? "Congratulations! You unlocked a reward."
+                            : previewTab === "side_button"
+                              ? "Side button mode preview."
+                              : "Countdown mode preview."}
+                      </span>
+                    </Text>
+                  </div>
 
-                    <div style={{ marginTop: "16px" }}>
-                      <input
-                        readOnly
-                        value={config.emailPlaceholder}
-                        style={{
-                          width: "100%",
-                          boxSizing: "border-box",
-                          borderRadius: "10px",
-                          border: "1px solid #d2d5d8",
-                          padding: "11px 12px",
-                          background: "#fff",
-                          color: "#8c9196",
-                          marginBottom: "12px",
-                        }}
-                      />
-                      <button
-                        type="button"
-                        style={{
-                          width: "100%",
-                          border: "none",
-                          borderRadius: "10px",
-                          padding: "12px",
-                          fontWeight: 700,
-                          background: config.buttonBackgroundColor,
-                          color: config.buttonTextColor,
-                          cursor: "default",
-                        }}
-                      >
-                        {config.ctaText}
-                      </button>
-                    </div>
+                  <div style={{ marginTop: "14px" }}>
+                    <input
+                      readOnly
+                      value={config.emailPlaceholder}
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        borderRadius: "10px",
+                        border: "1px solid #d2d5d8",
+                        padding: "11px 12px",
+                        background: "#fff",
+                        color: "#8c9196",
+                        marginBottom: "12px",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      style={{
+                        width: "100%",
+                        border: "none",
+                        borderRadius: "10px",
+                        padding: "12px",
+                        fontWeight: 700,
+                        background: config.buttonBackgroundColor,
+                        color: config.buttonTextColor,
+                        cursor: "default",
+                      }}
+                    >
+                      {config.ctaText}
+                    </button>
                   </div>
                 </div>
               </Box>
