@@ -23,7 +23,6 @@ export const loader = async ({ request }) => {
 
   try {
     if (!db.impression) {
-      console.error("Prisma Error: db.impression is undefined.");
       return json({ totalImpressions: 0, totalSpins: 0, conversionRate: 0, error: "Prisma client out of sync" });
     }
 
@@ -52,56 +51,106 @@ export default function Index() {
   return (
     <Page title="Lucky Wheel Dashboard">
       <BlockStack gap="500">
-        {/* Stats Bar */}
-        <Card padding="0">
-          <InlineStack gap="0" align="stretch">
-            {/* Date Selector Placeholder */}
-            <Box padding="400" borderRightWidth="025" borderColor="border-subdued">
-              <InlineStack gap="200" align="center">
+        {/* Advanced Stats Bar (Reference: User Image) */}
+        <Box
+          background="bg-surface"
+          borderWidth="025"
+          borderColor="border"
+          borderRadius="300"
+          overflowX="auto"
+        >
+          <InlineStack gap="0" align="stretch" wrap={false}>
+            {/* Date Selector */}
+            <Box padding="400" borderRightWidth="025" borderColor="border-subdued" minWidth="150px">
+              <InlineStack gap="200" align="center" blockAlign="center">
                 <Icon source={CalendarIcon} tone="base" />
                 <Text variant="bodyMd" fontWeight="semibold">7 days</Text>
               </InlineStack>
             </Box>
 
-            {/* Popups Displayed */}
-            <Box padding="400" borderRightWidth="025" borderColor="border-subdued" minWidth="200px">
-              <BlockStack gap="100">
-                <Text variant="headingSm" as="h3" color="subdued">Popups Displayed</Text>
-                <Text variant="headingLg" as="p" color="success">{totalImpressions}</Text>
-              </BlockStack>
+            {/* Popups Displayed (Selected/Highlighted) */}
+            <Box
+              padding="200"
+              borderRightWidth="025"
+              borderColor="border-subdued"
+              minWidth="220px"
+              flex="1"
+            >
+              <Box
+                padding="300"
+                background="bg-surface-secondary"
+                borderRadius="200"
+                height="100%"
+              >
+                <BlockStack gap="100">
+                  <Text variant="bodySm" fontWeight="semibold" color="subdued">Popups Displayed</Text>
+                  <Text variant="headingLg" as="p" fontWeight="bold" color="success">{totalImpressions}</Text>
+                </BlockStack>
+              </Box>
             </Box>
 
             {/* Forms Submitted */}
-            <Box padding="400" borderRightWidth="025" borderColor="border-subdued" minWidth="200px">
+            <Box
+              padding="400"
+              borderRightWidth="025"
+              borderColor="border-subdued"
+              minWidth="180px"
+              flex="1"
+            >
               <BlockStack gap="100">
-                <Text variant="headingSm" as="h3" color="subdued">Forms Submitted</Text>
-                <Text variant="headingLg" as="p" color="success">{totalSpins}</Text>
+                <Text variant="bodySm" fontWeight="semibold" color="subdued">Forms Submitted</Text>
+                <Text variant="headingLg" as="p" fontWeight="bold" color="success">{totalSpins}</Text>
               </BlockStack>
             </Box>
 
             {/* Emails Collected */}
-            <Box padding="400" borderRightWidth="025" borderColor="border-subdued" minWidth="200px">
+            <Box
+              padding="400"
+              borderRightWidth="025"
+              borderColor="border-subdued"
+              minWidth="180px"
+              flex="1"
+            >
               <BlockStack gap="100">
-                <Text variant="headingSm" as="h3" color="subdued">Emails Collected</Text>
-                <Text variant="headingLg" as="p" color="success">{totalSpins}</Text>
+                <Text variant="bodySm" fontWeight="semibold" color="subdued">Emails Collected</Text>
+                <Text variant="headingLg" as="p" fontWeight="bold" color="success">{totalSpins}</Text>
               </BlockStack>
             </Box>
 
-            {/* Conversions (Rate) */}
-            <Box padding="400" minWidth="150px" flex="1">
-              <InlineStack align="space-between">
+            {/* Conversions */}
+            <Box
+              padding="400"
+              minWidth="200px"
+              flex="1"
+            >
+              <InlineStack align="space-between" blockAlign="center">
                 <BlockStack gap="100">
-                  <Text variant="headingSm" as="h3" color="subdued">Conversions</Text>
-                  <Text variant="headingLg" as="p" color="success">{conversionRate}%</Text>
+                  <Text variant="bodySm" fontWeight="semibold" color="subdued">Conversions</Text>
+                  <Text variant="headingLg" as="p" fontWeight="bold" color="success">{conversionRate}%</Text>
                 </BlockStack>
-                <InlineStack gap="100">
-                  <Button icon={ChevronLeftIcon} variant="tertiary" size="slim" />
-                  <Button icon={ChevronRightIcon} variant="tertiary" size="slim" />
-                </InlineStack>
+
+                {/* Arrows on the right */}
+                <Box paddingInlineStart="400">
+                  <Box
+                    borderWidth="025"
+                    borderColor="border-subdued"
+                    borderRadius="200"
+                    overflow="hidden"
+                  >
+                    <InlineStack gap="0">
+                      <Box padding="100" borderRightWidth="025" borderColor="border-subdued">
+                        <Icon source={ChevronLeftIcon} tone="base" />
+                      </Box>
+                      <Box padding="100">
+                        <Icon source={ChevronRightIcon} tone="base" />
+                      </Box>
+                    </InlineStack>
+                  </Box>
+                </Box>
               </InlineStack>
             </Box>
           </InlineStack>
-        </Card>
+        </Box>
 
         {/* Action Cards */}
         <Layout>
