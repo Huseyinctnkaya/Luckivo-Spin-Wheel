@@ -102,6 +102,11 @@ const SIDE_TRIGGER_POSITION_OPTIONS = [
   { label: "Right", value: "right" },
 ];
 
+const COUNTDOWN_POSITION_OPTIONS = [
+  { label: "Top of the screen", value: "top_of_screen" },
+  { label: "Bottom of the screen", value: "bottom_of_screen" },
+];
+
 const PREVIEW_TABS = [
   { label: "Initial", value: "initial" },
   { label: "Result", value: "result" },
@@ -419,6 +424,12 @@ export default function WheelEditor() {
     ),
     sideTriggerButtonText: parsedConfig.sideTriggerButtonText || "💫 Get Discount",
     showCountdownAfterReveal: Boolean(parsedConfig.showCountdownAfterReveal),
+    countdownTimerText: parsedConfig.countdownTimerText || "Expires in",
+    countdownPosition: getValidOptionValue(
+      COUNTDOWN_POSITION_OPTIONS,
+      parsedConfig.countdownPosition,
+      "bottom_of_screen",
+    ),
     initialHeading:
       parsedConfig.initialHeading ||
       parsedConfig.title ||
@@ -734,6 +745,7 @@ export default function WheelEditor() {
     (config.logoPosition === "top_of_popup" || config.logoPosition === "both");
   const previewResultSegment = segments[0] || null;
   const previewSideButtonText = config.sideTriggerButtonText || "💫 Get Discount";
+  const previewCountdownTime = "11:07";
 
   const handleApplyCombinesToAll = () => {
     if (!discountDraft) return;
@@ -1031,20 +1043,39 @@ export default function WheelEditor() {
                 </Box>
 
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <InlineStack gap="200" blockAlign="center">
-                      <Text as="p">Show countdown timer after discount is revealed</Text>
-                      <Badge tone="info">New</Badge>
+                  <BlockStack gap="300">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <InlineStack gap="200" blockAlign="center">
+                        <Text as="p">Show countdown timer after discount is revealed</Text>
+                        <Badge tone="info">New</Badge>
+                      </InlineStack>
+                      <Checkbox
+                        labelHidden
+                        label="Show countdown timer after discount is revealed"
+                        checked={config.showCountdownAfterReveal}
+                        onChange={(checked) =>
+                          handleConfigChange("showCountdownAfterReveal", checked)
+                        }
+                      />
                     </InlineStack>
-                    <Checkbox
-                      labelHidden
-                      label="Show countdown timer after discount is revealed"
-                      checked={config.showCountdownAfterReveal}
-                      onChange={(checked) =>
-                        handleConfigChange("showCountdownAfterReveal", checked)
-                      }
-                    />
-                  </InlineStack>
+
+                    {config.showCountdownAfterReveal ? (
+                      <InlineGrid columns={2} gap="300">
+                        <TextField
+                          label="Countdown timer text"
+                          value={config.countdownTimerText}
+                          onChange={(value) => handleConfigChange("countdownTimerText", value)}
+                          autoComplete="off"
+                        />
+                        <Select
+                          label="Position"
+                          options={COUNTDOWN_POSITION_OPTIONS}
+                          value={config.countdownPosition}
+                          onChange={(value) => handleConfigChange("countdownPosition", value)}
+                        />
+                      </InlineGrid>
+                    ) : null}
+                  </BlockStack>
                 </Box>
               </div>
             </Card>
@@ -1496,7 +1527,88 @@ export default function WheelEditor() {
                     backgroundRepeat: "no-repeat",
                   }}
                 >
-                  {previewTab === "side_button" ? (
+                  {previewTab === "countdown" ? (
+                    <>
+                      {!config.showCountdownAfterReveal ? (
+                        <div
+                          style={{
+                            marginBottom: "12px",
+                            background: "#dbe7f3",
+                            borderRadius: "10px",
+                            padding: "12px",
+                            textAlign: "left",
+                          }}
+                        >
+                          <Text as="p" variant="bodyMd">
+                            Countdown timer is disabled in the settings.
+                          </Text>
+                          <div style={{ marginTop: "8px" }}>
+                            <Button size="slim" onClick={() => handleConfigChange("showCountdownAfterReveal", true)}>
+                              Enable
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <div
+                        style={{
+                          position: "relative",
+                          width: "100%",
+                          height: previewDevice === "mobile" ? "360px" : "440px",
+                          border: "1px solid #a7a7a7",
+                          borderRadius: "2px",
+                          background: "#f6f6f7",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            [config.countdownPosition === "top_of_screen" ? "top" : "bottom"]: "10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            background: config.buttonBackgroundColor,
+                            color: config.buttonTextColor,
+                            borderRadius: "10px",
+                            padding: "8px 10px",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                            opacity: config.showCountdownAfterReveal ? 1 : 0.45,
+                          }}
+                        >
+                          <span style={{ fontWeight: 600 }}>
+                            {`${config.countdownTimerText} ${previewCountdownTime}`}
+                          </span>
+                          <span
+                            style={{
+                              border: `1px dashed ${config.buttonTextColor}`,
+                              borderRadius: "4px",
+                              padding: "2px 6px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            CODE
+                          </span>
+                          <span
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              borderRadius: "50%",
+                              border: `1px solid ${config.buttonTextColor}`,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "12px",
+                              lineHeight: 1,
+                            }}
+                          >
+                            ×
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  ) : previewTab === "side_button" ? (
                     <>
                       {!config.showSideTriggerButton ? (
                         <div
@@ -1776,10 +1888,8 @@ export default function WheelEditor() {
 
                           <div style={{ marginTop: "6px" }}>
                             <Text as="p" tone="subdued">
-                              <span style={{ color: config.textColor }}>
-                                {previewTab === "initial"
-                                  ? config.initialDescription
-                                  : "Countdown mode preview."}
+                          <span style={{ color: config.textColor }}>
+                                {config.initialDescription}
                               </span>
                             </Text>
                           </div>
