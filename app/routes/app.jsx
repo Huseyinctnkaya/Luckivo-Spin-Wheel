@@ -23,7 +23,7 @@ export default function App() {
           Home
         </Link>
         <Link to="/app/wheels">Wheels</Link>
-        <Link to="/app/additional">Additional page</Link>
+        <Link to="/app/wheels">Wheels</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>
