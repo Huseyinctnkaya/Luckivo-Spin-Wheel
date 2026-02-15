@@ -73,7 +73,7 @@ export const action = async ({ request }) => {
   });
 
   if (!wheel) {
-    return json({ error: "Campaign not found." }, { status: 404 });
+    return json({ error: "Wheel not found." }, { status: 404 });
   }
 
   if (intent === "delete") {
@@ -104,7 +104,7 @@ export const action = async ({ request }) => {
   return json({ error: "Unknown intent." }, { status: 400 });
 };
 
-export default function CampaignsPage() {
+export default function WheelsPage() {
   const { wheels } = useLoaderData();
   const submit = useSubmit();
   const [filter, setFilter] = useState("all");
@@ -125,10 +125,10 @@ export default function CampaignsPage() {
 
   return (
     <Page
-      title="Campaigns"
+      title="Wheels"
       primaryAction={
         <Button variant="primary" onClick={openModal}>
-          Create Campaign
+          Create Wheel
         </Button>
       }
     >
@@ -136,7 +136,7 @@ export default function CampaignsPage() {
         <Box padding="400" paddingBlockEnd="0">
           <InlineStack align="space-between" blockAlign="center">
             <Text variant="headingMd" as="h2" fontWeight="bold">
-              Your campaigns
+              Your wheels
             </Text>
             <div
               style={{
@@ -182,26 +182,26 @@ export default function CampaignsPage() {
             <EmptyState
               heading={
                 filter === "active"
-                  ? "No active campaigns"
-                  : "Create your first campaign"
+                  ? "No active wheels"
+                  : "Create your first wheel"
               }
               action={{
-                content: "Create Campaign",
+                content: "Create Wheel",
                 onAction: openModal,
               }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
               <p>
                 {filter === "active"
-                  ? "Activate a campaign to start collecting emails and rewards."
-                  : "Create your first campaign to start collecting emails and rewards."}
+                  ? "Activate a wheel to start collecting emails and rewards."
+                  : "Create your first wheel to start collecting emails and rewards."}
               </p>
             </EmptyState>
           </Box>
         ) : (
           <Box paddingBlockStart="400">
             <IndexTable
-              resourceName={{ singular: "campaign", plural: "campaigns" }}
+              resourceName={{ singular: "wheel", plural: "wheels" }}
               itemCount={filtered.length}
               headings={[
                 { title: "Name" },
@@ -262,7 +262,7 @@ export default function CampaignsPage() {
       </Card>
 
       {/* Template Selection Modal */}
-      <Modal open={modalOpen} onClose={closeModal} title="Create Campaign">
+      <Modal open={modalOpen} onClose={closeModal} title="Create Wheel">
         <Modal.Section>
           <div
             style={{

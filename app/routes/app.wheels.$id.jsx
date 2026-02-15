@@ -278,7 +278,7 @@ export default function WheelEditor() {
   return (
     <Page
       title={title}
-      backAction={{ content: "Campaigns", url: "/app/wheels" }}
+      backAction={{ content: "Wheels", url: "/app/wheels" }}
       secondaryActions={[
         {
           content: "Preview",
@@ -300,7 +300,7 @@ export default function WheelEditor() {
             <Card>
               <BlockStack gap="400">
                 <TextField
-                  label="Campaign name"
+                  label="Wheel name"
                   value={title}
                   onChange={setTitle}
                   autoComplete="off"
@@ -439,7 +439,7 @@ export default function WheelEditor() {
                   tone="critical"
                   onClick={() => submit({ intent: "delete" }, { method: "post" })}
                 >
-                  Delete campaign
+                  Delete wheel
                 </Button>
               </InlineStack>
             </Card>
@@ -452,7 +452,7 @@ export default function WheelEditor() {
               <BlockStack gap="300">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text variant="headingMd" as="h2" fontWeight="bold">
-                    Campaign Status
+                    Wheel Status
                   </Text>
                   {isActive ? (
                     <Badge tone="success">Active</Badge>
@@ -463,7 +463,7 @@ export default function WheelEditor() {
 
                 <Select
                   labelHidden
-                  label="Campaign status"
+                  label="Wheel status"
                   options={[
                     { label: "Active", value: "active" },
                     { label: "Draft", value: "draft" },

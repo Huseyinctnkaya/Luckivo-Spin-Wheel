@@ -89,8 +89,8 @@ export default function NewWheel() {
 
   return (
     <Page
-      backAction={{ content: "Campaigns", url: "/app/wheels" }}
-      title="Create Campaign"
+      backAction={{ content: "Wheels", url: "/app/wheels" }}
+      title="Create Wheel"
       primaryAction={
         <Button variant="primary" onClick={handleSave} loading={isLoading}>
           Save and Edit Segments
@@ -103,11 +103,11 @@ export default function NewWheel() {
             <Card>
               <FormLayout>
                 <TextField
-                  label="Campaign Title"
+                  label="Wheel Title"
                   value={title}
                   onChange={setTitle}
                   autoComplete="off"
-                  helpText="Give your campaign a name (internal use only)"
+                  helpText="Give your wheel a name (internal use only)"
                 />
                 <TextField
                   label="Primary Theme Color"
