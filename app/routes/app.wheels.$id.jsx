@@ -401,6 +401,10 @@ export default function WheelEditor() {
   const parsedConfig = useMemo(() => parseConfig(wheel.config), [wheel.config]);
   const logoInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
+  const discountRowRefs = useRef({});
+  const segmentsRef = useRef(wheel.segments);
+  const draggedDiscountIndexRef = useRef(null);
+  const dragOverDiscountIndexRef = useRef(null);
 
   const [title, setTitle] = useState(wheel.title);
   const [isActive, setIsActive] = useState(wheel.isActive);
@@ -752,68 +756,123 @@ export default function WheelEditor() {
   const handleDiscountDragStart = (event, index) => {
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", String(index));
+    draggedDiscountIndexRef.current = index;
+    dragOverDiscountIndexRef.current = index;
     setDraggedDiscountIndex(index);
     setDragOverDiscountIndex(index);
+  };
+
+  const resetDiscountDragState = () => {
+    dragOverDiscountIndexRef.current = null;
+    draggedDiscountIndexRef.current = null;
+    setDraggedDiscountIndex(null);
+    setDragOverDiscountIndex(null);
+  };
+
+  const animateDiscountRowsReorder = (previousSegments, nextSegments, movingSegmentId) => {
+    const previousRects = new Map();
+    previousSegments.forEach((segment) => {
+      const element = discountRowRefs.current[segment.id];
+      if (element) {
+        previousRects.set(segment.id, element.getBoundingClientRect());
+      }
+    });
+
+    setSegments(nextSegments);
+    segmentsRef.current = nextSegments;
+
+    requestAnimationFrame(() => {
+      nextSegments.forEach((segment) => {
+        if (segment.id === movingSegmentId) return;
+        const element = discountRowRefs.current[segment.id];
+        const previous = previousRects.get(segment.id);
+        if (!element || !previous) return;
+
+        const current = element.getBoundingClientRect();
+        const deltaX = previous.left - current.left;
+        const deltaY = previous.top - current.top;
+
+        if (deltaX === 0 && deltaY === 0) return;
+        element.getAnimations().forEach((animation) => animation.cancel());
+        element.animate(
+          [
+            { transform: `translate(${deltaX}px, ${deltaY}px)` },
+            { transform: "translate(0px, 0px)" },
+          ],
+          {
+            duration: 220,
+            easing: "cubic-bezier(0.2, 0, 0, 1)",
+          },
+        );
+      });
+    });
+  };
+
+  const remapEditingDiscountIndex = (current, fromIndex, toIndex) => {
+    if (current === null) return null;
+    if (current === fromIndex) return toIndex;
+    if (fromIndex < toIndex && current > fromIndex && current <= toIndex) {
+      return current - 1;
+    }
+    if (fromIndex > toIndex && current >= toIndex && current < fromIndex) {
+      return current + 1;
+    }
+    return current;
+  };
+
+  const moveDiscountItem = (fromIndex, toIndex) => {
+    const currentSegments = segmentsRef.current;
+    if (
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= currentSegments.length ||
+      toIndex >= currentSegments.length ||
+      fromIndex === toIndex
+    ) {
+      return false;
+    }
+
+    const nextSegments = [...currentSegments];
+    const [movedSegment] = nextSegments.splice(fromIndex, 1);
+    nextSegments.splice(toIndex, 0, movedSegment);
+
+    animateDiscountRowsReorder(currentSegments, nextSegments, movedSegment?.id);
+    setEditingDiscountIndex((current) =>
+      remapEditingDiscountIndex(current, fromIndex, toIndex),
+    );
+    return true;
   };
 
   const handleDiscountDragOver = (event, index) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-    if (dragOverDiscountIndex !== index) {
+    if (dragOverDiscountIndexRef.current !== index) {
+      dragOverDiscountIndexRef.current = index;
       setDragOverDiscountIndex(index);
     }
   };
 
-  const handleDiscountDrop = (event, dropIndex) => {
+  const handleDiscountDragEnter = (index) => {
+    const fromIndex = draggedDiscountIndexRef.current;
+    if (fromIndex === null || fromIndex === index) return;
+    if (dragOverDiscountIndexRef.current === index) return;
+
+    const moved = moveDiscountItem(fromIndex, index);
+    if (moved) {
+      draggedDiscountIndexRef.current = index;
+      dragOverDiscountIndexRef.current = index;
+      setDraggedDiscountIndex(index);
+      setDragOverDiscountIndex(index);
+    }
+  };
+
+  const handleDiscountDrop = (event) => {
     event.preventDefault();
-    const fromData = event.dataTransfer.getData("text/plain");
-    const fromIndex =
-      draggedDiscountIndex ?? (fromData ? Number.parseInt(fromData, 10) : Number.NaN);
-
-    if (!Number.isInteger(fromIndex)) {
-      setDraggedDiscountIndex(null);
-      setDragOverDiscountIndex(null);
-      return;
-    }
-
-    if (
-      fromIndex < 0 ||
-      dropIndex < 0 ||
-      fromIndex >= segments.length ||
-      dropIndex >= segments.length ||
-      fromIndex === dropIndex
-    ) {
-      setDraggedDiscountIndex(null);
-      setDragOverDiscountIndex(null);
-      return;
-    }
-
-    setSegments((prev) => {
-      const next = [...prev];
-      const [movedItem] = next.splice(fromIndex, 1);
-      next.splice(dropIndex, 0, movedItem);
-      return next;
-    });
-
-    setEditingDiscountIndex((current) => {
-      if (current === null) return null;
-      if (current === fromIndex) return dropIndex;
-      if (fromIndex < dropIndex && current > fromIndex && current <= dropIndex) {
-        return current - 1;
-      }
-      if (fromIndex > dropIndex && current >= dropIndex && current < fromIndex) {
-        return current + 1;
-      }
-      return current;
-    });
-
-    setDraggedDiscountIndex(null);
-    setDragOverDiscountIndex(null);
+    resetDiscountDragState();
   };
 
   const handleDiscountDragEnd = () => {
-    setDraggedDiscountIndex(null);
-    setDragOverDiscountIndex(null);
+    resetDiscountDragState();
   };
 
   const handleLogoFileChange = async (event) => {
@@ -879,6 +938,10 @@ export default function WheelEditor() {
       setSavedEditorState(currentEditorState);
     }
   }, [savedEditorState, currentEditorState]);
+
+  useEffect(() => {
+    segmentsRef.current = segments;
+  }, [segments]);
 
   const handleApplyCombinesToAll = () => {
     if (!discountDraft) return;
@@ -1427,6 +1490,13 @@ export default function WheelEditor() {
                     segments.map((segment, index) => (
                       <div
                         key={segment.id}
+                        ref={(node) => {
+                          if (node) {
+                            discountRowRefs.current[segment.id] = node;
+                          } else {
+                            delete discountRowRefs.current[segment.id];
+                          }
+                        }}
                         className={
                           index === draggedDiscountIndex
                             ? "DiscountItemRow DiscountItemRow--dragging"
@@ -1435,7 +1505,8 @@ export default function WheelEditor() {
                               : "DiscountItemRow"
                         }
                         onDragOver={(event) => handleDiscountDragOver(event, index)}
-                        onDrop={(event) => handleDiscountDrop(event, index)}
+                        onDragEnter={() => handleDiscountDragEnter(index)}
+                        onDrop={handleDiscountDrop}
                         style={{
                           padding: "16px",
                           borderTop: index === 0 ? "none" : "1px solid #e3e3e3",
