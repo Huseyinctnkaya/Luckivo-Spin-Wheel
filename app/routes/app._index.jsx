@@ -21,19 +21,29 @@ import db from "../db.server";
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
 
-  const totalImpressions = await db.impression.count({
-    where: { shop: session.shop }
-  });
+  try {
+    if (!db.impression) {
+      console.error("Prisma Error: db.impression is undefined.");
+      return json({ totalImpressions: 0, totalSpins: 0, conversionRate: 0, error: "Prisma client out of sync" });
+    }
 
-  const totalSpins = await db.spin.count({
-    where: { wheel: { shop: session.shop } }
-  });
+    const totalImpressions = await db.impression.count({
+      where: { shop: session.shop }
+    });
 
-  const conversionRate = totalImpressions > 0
-    ? ((totalSpins / totalImpressions) * 100).toFixed(1)
-    : 0;
+    const totalSpins = await db.spin.count({
+      where: { wheel: { shop: session.shop } }
+    });
 
-  return json({ totalImpressions, totalSpins, conversionRate });
+    const conversionRate = totalImpressions > 0
+      ? ((totalSpins / totalImpressions) * 100).toFixed(1)
+      : 0;
+
+    return json({ totalImpressions, totalSpins, conversionRate });
+  } catch (error) {
+    console.error("Dashboard Loader Error:", error);
+    return json({ totalImpressions: 0, totalSpins: 0, conversionRate: 0, error: "Database error" });
+  }
 };
 
 export default function Index() {
