@@ -25,6 +25,7 @@ export default function App() {
         <Link to="/app/wheels">Campaigns</Link>
         <Link to="/app/subscribers">Subscribers</Link>
         <Link to="/app/analytics">Analytics</Link>
+        <Link to="/app/plans">Plans</Link>
       </NavMenu>
       <Outlet />
     </AppProvider>
