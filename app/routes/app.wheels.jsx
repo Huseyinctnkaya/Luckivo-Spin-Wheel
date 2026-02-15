@@ -15,69 +15,7 @@ import {
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState, useCallback } from "react";
-
-const TEMPLATES = [
-  {
-    id: "default",
-    name: "Default",
-    image: null,
-    config: { primaryColor: "#FF6B35", style: "default" },
-    segments: [
-      { label: "10% OFF", value: "SAVE10", probability: 25, color: "#FF5733" },
-      { label: "Better Luck", value: "NONE", probability: 40, color: "#C0C0C0" },
-      { label: "20% OFF", value: "SAVE20", probability: 15, color: "#33FF57" },
-      { label: "Free Shipping", value: "FREESHIP", probability: 20, color: "#3357FF" },
-    ],
-  },
-  {
-    id: "valentine-romance",
-    name: "Valentine Romance",
-    image: null,
-    config: { primaryColor: "#E91E63", style: "valentine-romance" },
-    segments: [
-      { label: "15% OFF", value: "LOVE15", probability: 25, color: "#E91E63" },
-      { label: "Try Again", value: "NONE", probability: 35, color: "#F8BBD0" },
-      { label: "25% OFF", value: "LOVE25", probability: 15, color: "#C2185B" },
-      { label: "Free Gift", value: "FREEGIFT", probability: 25, color: "#FF4081" },
-    ],
-  },
-  {
-    id: "valentine-sweet",
-    name: "Valentine Sweet",
-    image: null,
-    config: { primaryColor: "#FF80AB", style: "valentine-sweet" },
-    segments: [
-      { label: "10% OFF", value: "SWEET10", probability: 30, color: "#FF80AB" },
-      { label: "Better Luck", value: "NONE", probability: 35, color: "#FCE4EC" },
-      { label: "20% OFF", value: "SWEET20", probability: 15, color: "#F50057" },
-      { label: "Free Shipping", value: "SWEETSHIP", probability: 20, color: "#FF4081" },
-    ],
-  },
-  {
-    id: "lunar-new-year",
-    name: "Lunar New Year",
-    image: null,
-    config: { primaryColor: "#D32F2F", style: "lunar-new-year" },
-    segments: [
-      { label: "Lucky 10%", value: "LUNAR10", probability: 25, color: "#D32F2F" },
-      { label: "Try Again", value: "NONE", probability: 35, color: "#FFCDD2" },
-      { label: "Lucky 20%", value: "LUNAR20", probability: 15, color: "#FF6F00" },
-      { label: "Red Envelope", value: "LUCKY50", probability: 25, color: "#B71C1C" },
-    ],
-  },
-  {
-    id: "spin-for-luck",
-    name: "Spin for Luck!",
-    image: null,
-    config: { primaryColor: "#4CAF50", style: "spin-for-luck" },
-    segments: [
-      { label: "15% OFF", value: "LUCK15", probability: 25, color: "#4CAF50" },
-      { label: "No Luck", value: "NONE", probability: 35, color: "#E8F5E9" },
-      { label: "30% OFF", value: "LUCK30", probability: 15, color: "#2E7D32" },
-      { label: "Free Shipping", value: "LUCKSHIP", probability: 25, color: "#66BB6A" },
-    ],
-  },
-];
+import { WHEEL_TEMPLATES } from "../data/wheel-templates";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -97,7 +35,7 @@ export const action = async ({ request }) => {
 
   if (intent === "createFromTemplate") {
     const templateId = formData.get("templateId");
-    const template = TEMPLATES.find((item) => item.id === templateId);
+    const template = WHEEL_TEMPLATES.find((item) => item.id === templateId);
 
     if (!template) {
       return json({ error: "Template not found." }, { status: 404 });
@@ -333,7 +271,7 @@ export default function CampaignsPage() {
               gap: "16px",
             }}
           >
-            {TEMPLATES.map((template) => (
+            {WHEEL_TEMPLATES.map((template) => (
               <div
                 key={template.id}
                 style={{
