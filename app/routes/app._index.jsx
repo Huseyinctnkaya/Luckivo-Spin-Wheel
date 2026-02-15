@@ -18,6 +18,8 @@ import {
   ChevronLeftIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  EmailIcon,
+  NoteIcon,
 } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
@@ -342,6 +344,123 @@ export default function Index() {
             </div>
           ))}
         </InlineStack>
+
+        {/* Bottom Cards */}
+        <InlineStack gap="400" align="start" wrap={false}>
+          <div
+            style={{
+              flex: 1,
+              background: "var(--p-color-bg-surface)",
+              border: "1px solid #e3e3e3",
+              borderRadius: "12px",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              minHeight: "140px",
+            }}
+          >
+            <BlockStack gap="200">
+              <Text variant="headingMd" as="h3" fontWeight="bold">
+                Custom Code
+              </Text>
+              <Text variant="bodyMd" tone="subdued">
+                Add custom CSS or JavaScript to your spin wheel to match your brand perfectly.
+              </Text>
+            </BlockStack>
+            <div style={{ marginTop: "16px" }}>
+              <Link to="/app/custom-code" style={{ textDecoration: "none" }}>
+                <Button variant="primary">Manage Custom Code</Button>
+              </Link>
+            </div>
+          </div>
+          <div
+            style={{
+              flex: 1,
+              background: "var(--p-color-bg-surface)",
+              border: "1px solid #e3e3e3",
+              borderRadius: "12px",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              minHeight: "140px",
+            }}
+          >
+            <BlockStack gap="200">
+              <Text variant="headingMd" as="h3" fontWeight="bold">
+                Import & Export
+              </Text>
+              <Text variant="bodyMd" tone="subdued">
+                Backup your campaigns and settings, or transfer them to another store.
+              </Text>
+            </BlockStack>
+            <div style={{ marginTop: "16px" }}>
+              <Link to="/app/import-export" style={{ textDecoration: "none" }}>
+                <Button variant="primary">Import/Export Settings</Button>
+              </Link>
+            </div>
+          </div>
+        </InlineStack>
+
+        {/* Help & Support */}
+        <style>{`.help-support-section .Polaris-Icon { margin: 0; }`}</style>
+        <div
+          className="help-support-section"
+          style={{
+            background: "var(--p-color-bg-surface)",
+            border: "1px solid #e3e3e3",
+            borderRadius: "12px",
+            padding: "20px",
+          }}
+        >
+          <Text variant="headingMd" as="h3" fontWeight="bold">
+            Need help or customization?
+          </Text>
+          <div style={{ display: "flex", gap: "16px", marginTop: "16px" }}>
+            <div
+              style={{
+                flex: 1,
+                background: "#f6f6f7",
+                borderRadius: "10px",
+                padding: "16px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Icon source={EmailIcon} tone="base" />
+                <Text variant="headingSm" as="h4" fontWeight="semibold">
+                  Email Support
+                </Text>
+              </div>
+              <div style={{ marginTop: "4px" }}>
+                <Text variant="bodyMd" tone="subdued">
+                  Send us an email and we'll get back to you as soon as possible.
+                </Text>
+              </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                background: "#f6f6f7",
+                borderRadius: "10px",
+                padding: "16px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Icon source={NoteIcon} tone="base" />
+                <Text variant="headingSm" as="h4" fontWeight="semibold">
+                  Documentation
+                </Text>
+              </div>
+              <div style={{ marginTop: "4px" }}>
+                <Text variant="bodyMd" tone="subdued">
+                  Find solutions with our docs and tutorials.
+                </Text>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ height: "24px" }} />
       </BlockStack>
     </Page>
   );
