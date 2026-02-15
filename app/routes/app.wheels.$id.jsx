@@ -1479,12 +1479,11 @@ export default function WheelEditor() {
                 padding="400"
                 borderBlockStartWidth="025"
                 borderColor="border"
-                background="bg-surface-secondary"
               >
                 <div
                   style={{
-                    margin: "0 auto",
-                    maxWidth: previewDevice === "mobile" ? "300px" : "520px",
+                    width: "100%",
+                    boxSizing: "border-box",
                     textAlign: "center",
                     padding: "12px",
                     borderRadius: "12px",
@@ -1534,7 +1533,7 @@ export default function WheelEditor() {
                           style={{
                             position: "absolute",
                             top: "50%",
-                            [config.sideTriggerPosition === "right" ? "right" : "left"]: "-28px",
+                            [config.sideTriggerPosition === "right" ? "right" : "left"]: "0",
                             transform: "translateY(-50%)",
                             width: "34px",
                             background: config.buttonBackgroundColor,
