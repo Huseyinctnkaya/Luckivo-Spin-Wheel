@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
+import { SaveBar } from "@shopify/app-bridge-react";
 import {
   Page,
   Layout,
@@ -240,6 +241,43 @@ function buildPreviewRewardCode(segment) {
   return normalized || "PS123";
 }
 
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function sortDeep(value) {
+  if (Array.isArray(value)) return value.map(sortDeep);
+  if (value && typeof value === "object") {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = sortDeep(value[key]);
+        return acc;
+      }, {});
+  }
+  return value;
+}
+
+function createEditorSnapshot({ title, isActive, segments, config, segmentTextColors }) {
+  const payload = {
+    title,
+    isActive,
+    segments: (segments || []).map((segment) => ({
+      id: segment.id,
+      label: segment.label,
+      value: segment.value,
+      probability: Number(segment.probability || 0),
+      color: segment.color ?? null,
+    })),
+    config: {
+      ...(config || {}),
+      segmentTextColors: segmentTextColors || {},
+    },
+  };
+
+  return JSON.stringify(sortDeep(payload));
+}
+
 function ColorField({ label, value, onChange, fallback = "#000000" }) {
   const normalized = normalizeHex(value, fallback);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -477,6 +515,7 @@ export default function WheelEditor() {
   });
   const [editingDiscountIndex, setEditingDiscountIndex] = useState(null);
   const [discountDraft, setDiscountDraft] = useState(null);
+  const [savedEditorState, setSavedEditorState] = useState(null);
 
   const submit = useSubmit();
   const navigation = useNavigation();
@@ -746,6 +785,31 @@ export default function WheelEditor() {
   const previewResultCode = buildPreviewRewardCode(previewResultSegment);
   const previewSideButtonText = config.sideTriggerButtonText || "💫 Get Discount";
   const previewCountdownTime = "11:07";
+  const currentEditorState = useMemo(
+    () => ({
+      title,
+      isActive,
+      segments: deepClone(segments),
+      config: deepClone(config),
+      segmentTextColors: deepClone(segmentTextColors),
+    }),
+    [title, isActive, segments, config, segmentTextColors],
+  );
+  const currentSnapshot = useMemo(
+    () => createEditorSnapshot(currentEditorState),
+    [currentEditorState],
+  );
+  const savedSnapshot = useMemo(
+    () => (savedEditorState ? createEditorSnapshot(savedEditorState) : null),
+    [savedEditorState],
+  );
+  const isDirty = Boolean(savedSnapshot && currentSnapshot !== savedSnapshot);
+
+  useEffect(() => {
+    if (!savedEditorState) {
+      setSavedEditorState(currentEditorState);
+    }
+  }, [savedEditorState, currentEditorState]);
 
   const handleApplyCombinesToAll = () => {
     if (!discountDraft) return;
@@ -766,6 +830,7 @@ export default function WheelEditor() {
   };
 
   const handleSave = () => {
+    setSavedEditorState(currentEditorState);
     submit(
       {
         title,
@@ -775,6 +840,17 @@ export default function WheelEditor() {
       },
       { method: "post" },
     );
+  };
+
+  const handleDiscard = () => {
+    if (!savedEditorState) return;
+
+    setTitle(savedEditorState.title);
+    setIsActive(savedEditorState.isActive);
+    setSegments(deepClone(savedEditorState.segments));
+    setConfig(deepClone(savedEditorState.config));
+    setSegmentTextColors(deepClone(savedEditorState.segmentTextColors));
+    closeDiscountEditor();
   };
 
   return (
@@ -788,6 +864,15 @@ export default function WheelEditor() {
         },
       ]}
     >
+      <SaveBar open={isDirty}>
+        <button variant="primary" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Kaydediliyor..." : "Kaydet"}
+        </button>
+        <button onClick={handleDiscard} disabled={isSaving}>
+          Vazgeç
+        </button>
+      </SaveBar>
+
       <div className="WheelEditorLayout">
         <Layout>
         {totalProbability !== 100 && (
@@ -1316,19 +1401,6 @@ export default function WheelEditor() {
               </div>
             </Card>
 
-            <Card>
-              <InlineStack gap="300">
-                <Button variant="primary" onClick={handleSave} loading={isSaving}>
-                  Save changes
-                </Button>
-                <Button
-                  tone="critical"
-                  onClick={() => submit({ intent: "delete" }, { method: "post" })}
-                >
-                  Delete wheel
-                </Button>
-              </InlineStack>
-            </Card>
           </BlockStack>
         </Layout.Section>
 
