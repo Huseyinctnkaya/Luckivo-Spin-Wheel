@@ -21,15 +21,19 @@
         <div class="lucky-wheel-form" id="lucky-wheel-form">
           <input type="email" id="lucky-wheel-email" placeholder="Enter your email" required>
           <button type="button" id="lucky-wheel-spin-btn">SPIN NOW</button>
+          <p id="lucky-wheel-info-text">By entering, you agree to receive updates and offers from our store.</p>
         </div>
 
         <div id="lucky-wheel-result" style="display: none;">
-          <h3>Congratulations!</h3>
-          <p id="lucky-wheel-result-text"></p>
-          <div class="coupon-box">
-             <span id="lucky-wheel-coupon"></span>
-             <button onclick="copyCoupon()">Copy</button>
+          <h3 id="lucky-wheel-result-heading">🎁 You Won!</h3>
+          <p id="lucky-wheel-result-description">Copy your code and enjoy your reward at checkout.</p>
+          <p id="lucky-wheel-result-email-sent">Check your email for your discount code!</p>
+          <p id="lucky-wheel-result-reward"></p>
+          <div id="lucky-wheel-code-row" class="lucky-wheel-code-row">
+            <span id="lucky-wheel-coupon">CODE123</span>
+            <button type="button" id="lucky-wheel-copy-btn">Copy Code</button>
           </div>
+          <button type="button" id="lucky-wheel-continue-btn">Continue Shopping</button>
         </div>
       </div>
     </div>

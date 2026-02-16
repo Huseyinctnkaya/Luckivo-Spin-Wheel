@@ -5,8 +5,7 @@
 
 .lucky-wheel-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.7);
@@ -18,38 +17,89 @@
 }
 
 .lucky-wheel-modal {
-  background: white;
-  padding: 40px;
+  background: #ffffff;
+  padding: 24px 20px 22px;
   border-radius: 20px;
   position: relative;
-  max-width: 500px;
-  width: 90%;
+  max-width: 560px;
+  width: min(94vw, 560px);
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  animation: modal-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: modal-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "San Francisco",
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
 }
 
 @keyframes modal-in {
-  from { transform: scale(0.8); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: translateY(10px) scale(0.98);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 .lucky-wheel-close {
   position: absolute;
-  top: 15px;
-  right: 15px;
-  background: none;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
   border: none;
-  font-size: 24px;
-  cursor: pointer;
+  background: transparent;
   color: #666;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.lucky-wheel-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+#lucky-wheel-title,
+#lucky-wheel-result-heading {
+  margin: 0;
+  font-size: 22px !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.2px !important;
+  text-align: left;
+  width: 100%;
+}
+
+#lucky-wheel-description,
+#lucky-wheel-info-text,
+#lucky-wheel-result-description,
+#lucky-wheel-result-email-sent,
+#lucky-wheel-result-reward {
+  margin: 0;
+  font-size: 16px !important;
+  line-height: 1.35 !important;
+  text-align: left;
+  width: 100%;
 }
 
 .wheel-wrapper {
   position: relative;
-  margin: 30px auto;
-  width: 300px;
-  height: 300px;
+  margin: 6px auto;
+  width: min(76vw, 320px);
+  height: min(76vw, 320px);
 }
 
 #wheel-canvas {
@@ -60,59 +110,176 @@
 
 .wheel-pointer {
   position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 30px;
-  height: 40px;
-  background: #333;
-  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  top: 50%;
+  right: -13px;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 4px solid #f1ad46;
+  background: #ffffff;
   z-index: 10;
+}
+
+.wheel-pointer::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -13px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 14px solid #f1ad46;
+}
+
+.wheel-pointer::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -9px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 11px solid #ffffff;
+}
+
+.lucky-wheel-form,
+#lucky-wheel-result {
+  width: 100%;
+  max-width: 520px;
+  text-align: left;
 }
 
 .lucky-wheel-form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin-top: 20px;
+  gap: 12px;
 }
 
 .lucky-wheel-form input {
+  width: 100%;
+  box-sizing: border-box;
   padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid #d2d5d8;
+  border-radius: 10px;
   font-size: 16px;
 }
 
-.lucky-wheel-form button {
-  background: #4f46e5;
-  color: white;
+.lucky-wheel-form button,
+#lucky-wheel-copy-btn,
+#lucky-wheel-continue-btn {
   border: none;
-  padding: 14px;
-  border-radius: 8px;
-  font-weight: bold;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.3s;
 }
 
-.lucky-wheel-form button:hover {
-  filter: brightness(1.1);
-}
-
-.coupon-box {
-  background: #f3f4f6;
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 20px;
+#lucky-wheel-result {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px dashed #4f46e5;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#lucky-wheel-result-heading {
+  margin-top: 2px;
+}
+
+.lucky-wheel-code-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: stretch;
+  border: 2px dashed #6c5ce7;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
 }
 
 #lucky-wheel-coupon {
-  font-family: monospace;
-  font-weight: bold;
-  font-size: 18px;
-  color: #4f46e5;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  color: #303030;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#lucky-wheel-copy-btn {
+  border-radius: 0;
+  padding: 0 18px;
+}
+
+#lucky-wheel-continue-btn {
+  margin-top: 4px;
+  width: 100%;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  .lucky-wheel-modal {
+    padding: 22px 16px 18px;
+  }
+
+  #lucky-wheel-coupon {
+    font-size: 22px;
+  }
+}
+
+@media (min-width: 768px) {
+  .lucky-wheel-modal {
+    max-width: 980px;
+    width: min(96vw, 980px);
+    padding: 30px 30px 26px;
+    text-align: left;
+  }
+
+  .lucky-wheel-content {
+    display: grid;
+    grid-template-columns: minmax(320px, 46%) minmax(340px, 54%);
+    grid-template-areas:
+      "wheel title"
+      "wheel description"
+      "wheel content";
+    align-items: center;
+    column-gap: 28px;
+    row-gap: 12px;
+  }
+
+  .wheel-wrapper {
+    grid-area: wheel;
+    margin: 0;
+    width: min(35vw, 360px);
+    height: min(35vw, 360px);
+    max-width: 360px;
+    max-height: 360px;
+  }
+
+  #lucky-wheel-title {
+    grid-area: title;
+  }
+
+  #lucky-wheel-description {
+    grid-area: description;
+  }
+
+  .lucky-wheel-form,
+  #lucky-wheel-result {
+    grid-area: content;
+    margin-top: 0;
+  }
+
+  #lucky-wheel-coupon {
+    font-size: 42px;
+  }
 }
