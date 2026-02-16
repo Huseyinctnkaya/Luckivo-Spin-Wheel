@@ -2,7 +2,6 @@
     const root = document.getElementById('lucky-wheel-root');
     if (!root) return;
 
-    const shop = root.dataset.shop;
     const proxyUrl = root.dataset.proxyUrl;
     const overlay = document.getElementById('lucky-wheel-overlay');
     const closeBtn = document.getElementById('lucky-wheel-close');
@@ -15,7 +14,12 @@
 
     async function initWheel() {
         try {
-            const response = await fetch(`${proxyUrl}/active-wheel?shop=${shop}`);
+            const response = await fetch(`${proxyUrl}/active-wheel`);
+            const contentType = response.headers.get('content-type') || '';
+            if (!response.ok || !contentType.includes('application/json')) {
+                const body = await response.text();
+                throw new Error(`Proxy request failed (${response.status}): ${body.slice(0, 180)}`);
+            }
             const data = await response.json();
 
             if (data && data.wheel) {
@@ -29,7 +33,7 @@
                         await fetch(`${proxyUrl}/track-impression`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ shop, wheelId: wheelConfig.id })
+                            body: JSON.stringify({ wheelId: wheelConfig.id })
                         });
                     } catch (err) {
                         console.error('Failed to track impression:', err);
@@ -87,8 +91,13 @@
             const response = await fetch(`${proxyUrl}/spin`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ shop, wheelId: wheelConfig.id, email })
+                body: JSON.stringify({ wheelId: wheelConfig.id, email })
             });
+            const contentType = response.headers.get('content-type') || '';
+            if (!response.ok || !contentType.includes('application/json')) {
+                const body = await response.text();
+                throw new Error(`Spin failed (${response.status}): ${body.slice(0, 180)}`);
+            }
             const result = await response.json();
 
             if (result.error) {
