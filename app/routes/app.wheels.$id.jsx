@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
+import { useActionData, useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
 import { SaveBar } from "@shopify/app-bridge-react";
 import {
   Page,
@@ -356,9 +356,12 @@ function ColorField({ label, value, onChange, fallback = "#000000" }) {
 }
 
 export const loader = async ({ params, request }) => {
-  await authenticate.admin(request);
-  const wheel = await db.wheel.findUnique({
-    where: { id: params.id },
+  const { session } = await authenticate.admin(request);
+  const wheel = await db.wheel.findFirst({
+    where: {
+      id: params.id,
+      shop: session.shop,
+    },
     include: { segments: true },
   });
 
@@ -368,13 +371,30 @@ export const loader = async ({ params, request }) => {
 };
 
 export const action = async ({ request, params }) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
 
   if (intent === "delete") {
-    await db.wheel.delete({ where: { id: params.id } });
+    await db.wheel.deleteMany({
+      where: {
+        id: params.id,
+        shop: session.shop,
+      },
+    });
     return redirect("/app/wheels");
+  }
+
+  const currentWheel = await db.wheel.findFirst({
+    where: {
+      id: params.id,
+      shop: session.shop,
+    },
+    select: { id: true },
+  });
+
+  if (!currentWheel) {
+    return json({ success: false, error: "Wheel not found." }, { status: 404 });
   }
 
   const title = formData.get("title");
@@ -382,8 +402,29 @@ export const action = async ({ request, params }) => {
   const isActive = formData.get("isActive") === "true";
   const segmentsData = JSON.parse(formData.get("segments"));
 
+  if (isActive) {
+    const activeConflict = await db.wheel.findFirst({
+      where: {
+        shop: session.shop,
+        isActive: true,
+        NOT: { id: currentWheel.id },
+      },
+      select: { title: true },
+    });
+
+    if (activeConflict) {
+      return json(
+        {
+          success: false,
+          error: `Başka bir çark zaten aktif (${activeConflict.title}). Lütfen önce onu kapatın.`,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   await db.wheel.update({
-    where: { id: params.id },
+    where: { id: currentWheel.id },
     data: {
       title,
       config,
@@ -404,6 +445,7 @@ export const action = async ({ request, params }) => {
 };
 
 export default function WheelEditor() {
+  const actionData = useActionData();
   const { wheel } = useLoaderData();
   const parsedConfig = useMemo(() => parseConfig(wheel.config), [wheel.config]);
   const logoInputRef = useRef(null);
@@ -563,6 +605,7 @@ export default function WheelEditor() {
   const [editingDiscountIndex, setEditingDiscountIndex] = useState(null);
   const [discountDraft, setDiscountDraft] = useState(null);
   const [savedEditorState, setSavedEditorState] = useState(null);
+  const pendingSaveStateRef = useRef(null);
   const [draggedDiscountIndex, setDraggedDiscountIndex] = useState(null);
   const [dragOverDiscountIndex, setDragOverDiscountIndex] = useState(null);
 
@@ -983,6 +1026,16 @@ export default function WheelEditor() {
   }, [savedEditorState, currentEditorState]);
 
   useEffect(() => {
+    if (!actionData) return;
+
+    if (actionData.success && pendingSaveStateRef.current) {
+      setSavedEditorState(pendingSaveStateRef.current);
+    }
+
+    pendingSaveStateRef.current = null;
+  }, [actionData]);
+
+  useEffect(() => {
     segmentsRef.current = segments;
   }, [segments]);
 
@@ -1005,7 +1058,7 @@ export default function WheelEditor() {
   };
 
   const handleSave = () => {
-    setSavedEditorState(currentEditorState);
+    pendingSaveStateRef.current = currentEditorState;
     submit(
       {
         title,
@@ -1591,6 +1644,13 @@ export default function WheelEditor() {
 
       <div className="WheelEditorLayout">
         <Layout>
+        {actionData?.error ? (
+          <Layout.Section variant="fullWidth">
+            <Banner tone="critical">
+              {actionData.error}
+            </Banner>
+          </Layout.Section>
+        ) : null}
         {totalProbability !== 100 && (
           <Layout.Section variant="fullWidth">
             <Banner tone="warning">

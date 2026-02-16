@@ -7,13 +7,12 @@ export const loader = async ({ request }) => {
 
     if (!session) return json({ error: "Unauthorized" }, { status: 401 });
 
-    const { pathname, searchParams } = new URL(url);
+    const { pathname } = new URL(url);
 
     // Subpath: apps/wheel-proxy/active-wheel
     if (pathname.endsWith("/active-wheel")) {
-        const shop = searchParams.get("shop");
         const wheel = await db.wheel.findFirst({
-            where: { shop, isActive: true },
+            where: { shop: session.shop, isActive: true },
             include: { segments: true }
         });
 
@@ -32,7 +31,7 @@ export const action = async ({ request }) => {
 
     if (pathname.endsWith("/spin")) {
         const body = await request.json();
-        const { wheelId, email, shop } = body;
+        const { wheelId, email } = body;
 
         const wheel = await db.wheel.findUnique({
             where: { id: wheelId },
@@ -41,6 +40,10 @@ export const action = async ({ request }) => {
 
         if (!wheel || !wheel.isActive) {
             return json({ error: "Wheel not active" }, { status: 400 });
+        }
+
+        if (wheel.shop !== session.shop) {
+            return json({ error: "Wheel not found for this shop" }, { status: 404 });
         }
 
         // Calculate result based on probability
@@ -65,12 +68,21 @@ export const action = async ({ request }) => {
 
     if (pathname.endsWith("/track-impression")) {
         const body = await request.json();
-        const { wheelId, shop } = body;
+        const { wheelId } = body;
+
+        const wheel = await db.wheel.findUnique({
+            where: { id: wheelId },
+            select: { shop: true },
+        });
+
+        if (!wheel || wheel.shop !== session.shop) {
+            return json({ error: "Wheel not found for this shop" }, { status: 404 });
+        }
 
         await db.impression.create({
             data: {
                 wheelId,
-                shop
+                shop: session.shop
             }
         });
 
