@@ -1168,26 +1168,27 @@ export default function WheelEditor() {
       <div
         style={{
           position: "absolute",
-          right: "-24px",
+          right: wheelSize >= 300 ? "-31px" : "-28px",
           top: "50%",
           transform: "translateY(-50%)",
-          width: "34px",
-          height: "24px",
+          width: wheelSize >= 300 ? "44px" : "40px",
+          height: wheelSize >= 300 ? "30px" : "28px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           pointerEvents: "none",
         }}
       >
-        <svg width="34" height="24" viewBox="0 0 34 24" fill="none" aria-hidden="true">
+        <svg width="44" height="30" viewBox="0 0 44 30" fill="none" aria-hidden="true">
           <path
-            d="M2 12L9.5 5C11.8 2.8 14.9 1.5 18.1 1.5C24.6 1.5 30 6.9 30 13.4C30 18.9 25.5 22.5 20 22.5C15.7 22.5 11.6 20.7 8.9 17.9L2 12Z"
+            d="M2 15L18 4.5V25.5L2 15Z"
             fill="#ffffff"
             stroke="#f1ad46"
-            strokeWidth="4"
+            strokeWidth="3"
             strokeLinejoin="round"
           />
-          <circle cx="19.5" cy="12.5" r="4.2" fill="#ffffff" />
+          <circle cx="30" cy="15" r="10" fill="#ffffff" stroke="#f1ad46" strokeWidth="4" />
+          <circle cx="30" cy="15" r="3.4" fill="#f1ad46" />
         </svg>
       </div>
       <div

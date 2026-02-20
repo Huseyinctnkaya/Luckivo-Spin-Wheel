@@ -299,10 +299,17 @@
     spinBtn.textContent = getSetting(["initialCtaText", "ctaText"], "SPIN NOW");
   }
 
+  function setInitialContentVisibility(visible) {
+    const display = visible ? "" : "none";
+    if (titleEl) titleEl.style.display = display;
+    if (descriptionEl) descriptionEl.style.display = display;
+  }
+
   function showResult(result) {
     if (form) form.style.display = "none";
     if (!resultDiv) return;
 
+    setInitialContentVisibility(false);
     resultDiv.style.display = "flex";
 
     const noLuckByCode = isNoRewardValue(result?.couponCode);
@@ -379,6 +386,7 @@
       wheelConfig = data.wheel;
       wheelSettings = parseWheelSettings(wheelConfig.config);
 
+      setInitialContentVisibility(true);
       if (form) form.style.display = "flex";
       if (resultDiv) resultDiv.style.display = "none";
 
