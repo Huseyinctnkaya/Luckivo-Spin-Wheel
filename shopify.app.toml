@@ -2,7 +2,7 @@
 
 client_id = "7dab8c453f7b44b3c15da2b89b004213"
 name = "Luckivo - Spin Wheel"
-application_url = "https://initiatives-variety-podcast-laboratory.trycloudflare.com"
+application_url = "https://merger-send-select-data.trycloudflare.com"
 embedded = true
 
 [build]
@@ -24,9 +24,9 @@ api_version = "2026-04"
 scopes = "write_products,read_discounts,write_discounts,read_customers,write_customers,read_themes"
 
 [auth]
-redirect_urls = [ "https://initiatives-variety-podcast-laboratory.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://merger-send-select-data.trycloudflare.com/api/auth" ]
 
 [app_proxy]
-url = "https://initiatives-variety-podcast-laboratory.trycloudflare.com/app/proxy"
+url = "https://merger-send-select-data.trycloudflare.com/app/proxy"
 subpath = "wheel-proxy"
 prefix = "apps"
