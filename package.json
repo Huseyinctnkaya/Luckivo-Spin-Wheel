@@ -1,5 +1,5 @@
 {
-  "name": "wheel-app-craft",
+  "name": "luckivo-spin-wheel",
   "private": true,
   "scripts": {
     "build": "remix vite:build",

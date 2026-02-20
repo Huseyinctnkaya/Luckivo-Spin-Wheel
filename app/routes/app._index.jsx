@@ -269,7 +269,7 @@ export default function Index() {
   ];
 
   return (
-    <Page title="Lucky Wheel Dashboard">
+    <Page title="Luckivo - Spin Wheel Dashboard">
       <BlockStack gap="500">
         {/* Stats Bar */}
         <div

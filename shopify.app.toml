@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "7dab8c453f7b44b3c15da2b89b004213"
-name = "wheel-app-craft"
+name = "Luckivo - Spin Wheel"
 application_url = "https://initiatives-variety-podcast-laboratory.trycloudflare.com"
 embedded = true
 
