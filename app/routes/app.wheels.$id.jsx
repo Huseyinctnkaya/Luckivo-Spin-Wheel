@@ -135,6 +135,11 @@ const LOGO_POSITION_OPTIONS = [
   { label: "Both", value: "both" },
 ];
 
+const EMAIL_REQUIREMENT_OPTIONS = [
+  { label: "Required", value: "required" },
+  { label: "Optional", value: "optional" },
+];
+
 function parseConfig(rawConfig) {
   try {
     return JSON.parse(rawConfig || "{}");
@@ -465,6 +470,7 @@ export default function WheelEditor() {
   const [contentOpen, setContentOpen] = useState(true);
   const [contentTab, setContentTab] = useState("general");
   const [popupRulesOpen, setPopupRulesOpen] = useState(true);
+  const [formFieldsOpen, setFormFieldsOpen] = useState(true);
   const [discountsOpen, setDiscountsOpen] = useState(true);
   const [segmentTextColors, setSegmentTextColors] = useState(
     parsedConfig.segmentTextColors || {},
@@ -601,6 +607,16 @@ export default function WheelEditor() {
       parsedConfig.logoPosition,
       "center_of_wheel",
     ),
+    disableAllFormFields: Boolean(parsedConfig.disableAllFormFields),
+    showNameField: Boolean(parsedConfig.showNameField),
+    showEmailField: parsedConfig.showEmailField !== false,
+    emailFieldRequirement: getValidOptionValue(
+      EMAIL_REQUIREMENT_OPTIONS,
+      parsedConfig.emailFieldRequirement,
+      "required",
+    ),
+    showPhoneField: Boolean(parsedConfig.showPhoneField),
+    showConsentCheckbox: Boolean(parsedConfig.showConsentCheckbox),
   });
   const [editingDiscountIndex, setEditingDiscountIndex] = useState(null);
   const [discountDraft, setDiscountDraft] = useState(null);
@@ -1856,6 +1872,136 @@ export default function WheelEditor() {
                       </BlockStack>
                     ) : null}
                   </BlockStack>
+                </Box>
+              </div>
+            </Card>
+
+            <Card padding="0">
+              <Box padding="400">
+                <InlineStack align="space-between" blockAlign="center">
+                  <div>
+                    <Text variant="headingMd" as="h2" fontWeight="bold">
+                      Form Fields Configuration
+                    </Text>
+                    <Text as="p" tone="subdued">
+                      Adjust the form fields to be collected from the customer
+                    </Text>
+                  </div>
+                  <Button
+                    variant="plain"
+                    icon={formFieldsOpen ? ChevronUpIcon : ChevronDownIcon}
+                    onClick={() => setFormFieldsOpen((open) => !open)}
+                    accessibilityLabel="Toggle form fields section"
+                  />
+                </InlineStack>
+              </Box>
+
+              <div
+                style={{
+                  maxHeight: formFieldsOpen ? "1200px" : "0px",
+                  overflow: formFieldsOpen ? "visible" : "hidden",
+                  opacity: formFieldsOpen ? 1 : 0,
+                  transitionDuration: "500ms",
+                  transitionTimingFunction: "ease-in-out",
+                  transitionProperty: "max-height, opacity",
+                  pointerEvents: formFieldsOpen ? "auto" : "none",
+                }}
+              >
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="p">Disable All Form Fields</Text>
+                    <Checkbox
+                      labelHidden
+                      label="Disable All Form Fields"
+                      checked={config.disableAllFormFields}
+                      onChange={(checked) => handleConfigChange("disableAllFormFields", checked)}
+                    />
+                  </InlineStack>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
+                      Name Field
+                    </Text>
+                    <Checkbox
+                      labelHidden
+                      label="Name Field"
+                      checked={config.showNameField}
+                      disabled={config.disableAllFormFields}
+                      onChange={(checked) => handleConfigChange("showNameField", checked)}
+                    />
+                  </InlineStack>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <BlockStack gap="300">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
+                        Email Field
+                      </Text>
+                      <Checkbox
+                        labelHidden
+                        label="Email Field"
+                        checked={config.showEmailField}
+                        disabled={config.disableAllFormFields}
+                        onChange={(checked) => handleConfigChange("showEmailField", checked)}
+                      />
+                    </InlineStack>
+
+                    {config.showEmailField && !config.disableAllFormFields ? (
+                      <Box background="bg-surface-secondary" padding="300" borderRadius="200">
+                        <InlineGrid columns={2} gap="300">
+                          <Select
+                            label="Email field requirement"
+                            options={EMAIL_REQUIREMENT_OPTIONS}
+                            value={config.emailFieldRequirement}
+                            onChange={(value) =>
+                              handleConfigChange("emailFieldRequirement", value)
+                            }
+                          />
+                          <TextField
+                            label="Email placeholder text"
+                            value={config.initialEmailPlaceholder}
+                            onChange={(value) =>
+                              handleConfigChange("initialEmailPlaceholder", value)
+                            }
+                            autoComplete="off"
+                          />
+                        </InlineGrid>
+                      </Box>
+                    ) : null}
+                  </BlockStack>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
+                      Phone Field
+                    </Text>
+                    <Checkbox
+                      labelHidden
+                      label="Phone Field"
+                      checked={config.showPhoneField}
+                      disabled={config.disableAllFormFields}
+                      onChange={(checked) => handleConfigChange("showPhoneField", checked)}
+                    />
+                  </InlineStack>
+                </Box>
+
+                <Box borderBlockStartWidth="025" borderColor="border" padding="400">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
+                      Consent Checkbox
+                    </Text>
+                    <Checkbox
+                      labelHidden
+                      label="Consent Checkbox"
+                      checked={config.showConsentCheckbox}
+                      disabled={config.disableAllFormFields}
+                      onChange={(checked) => handleConfigChange("showConsentCheckbox", checked)}
+                    />
+                  </InlineStack>
                 </Box>
               </div>
             </Card>
