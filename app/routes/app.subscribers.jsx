@@ -15,6 +15,7 @@ import {
 } from "@shopify/polaris";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
 import { useCallback, useMemo, useState } from "react";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
@@ -104,6 +105,7 @@ export default function SubscribersPage() {
     recentSubmissions,
   } = useLoaderData();
 
+  const shopify = useAppBridge();
   const [, setSearchParams] = useSearchParams();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -247,7 +249,7 @@ export default function SubscribersPage() {
               <Text variant="headingMd" as="h2" fontWeight="bold">
                 Recent Submissions
               </Text>
-              <Button url={`https://${shop}/admin/customers`} external>
+              <Button onClick={() => shopify.navigate(`https://${shop}/admin/customers`, { target: "_blank" })}>
                 View in Shopify
               </Button>
             </InlineStack>
