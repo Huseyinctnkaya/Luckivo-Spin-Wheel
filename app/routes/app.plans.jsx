@@ -30,7 +30,7 @@ const PREMIUM_FEATURES = [
 export default function PlansPage() {
   const { currentPlan } = useLoaderData();
   const [searchParams, setSearchParams] = useSearchParams();
-  const billingPeriod = searchParams.get("billing") === "monthly" ? "monthly" : "annual";
+  const billingPeriod = searchParams.get("billing") === "yearly" ? "yearly" : "monthly";
 
   const setBillingPeriod = (period) => {
     const params = new URLSearchParams(searchParams);
@@ -39,7 +39,7 @@ export default function PlansPage() {
   };
 
   const premiumPricing = useMemo(() => {
-    if (billingPeriod === "annual") {
+    if (billingPeriod === "yearly") {
       return { amount: "$39.99", suffix: "/year", note: "Billed yearly" };
     }
     return { amount: "$3.99", suffix: "/month", note: "7-day free trial included" };
@@ -76,17 +76,17 @@ export default function PlansPage() {
             </button>
             <button
               type="button"
-              onClick={() => setBillingPeriod("annual")}
+              onClick={() => setBillingPeriod("yearly")}
               style={{
                 border: "none",
                 borderLeft: "1px solid #c9cccf",
-                background: billingPeriod === "annual" ? "#2f3136" : "transparent",
-                color: billingPeriod === "annual" ? "#ffffff" : "#303030",
+                background: billingPeriod === "yearly" ? "#2f3136" : "transparent",
+                color: billingPeriod === "yearly" ? "#ffffff" : "#303030",
                 padding: "8px 14px",
                 fontWeight: 600,
                 cursor: "pointer",
                 boxShadow:
-                  billingPeriod === "annual" ? "inset 0 0 0 1px #2f6dfc" : "none",
+                  billingPeriod === "yearly" ? "inset 0 0 0 1px #2f6dfc" : "none",
               }}
             >
               Yearly
