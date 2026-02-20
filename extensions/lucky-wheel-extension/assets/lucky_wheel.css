@@ -52,8 +52,8 @@
 
 .lucky-wheel-close {
   position: absolute;
-  top: 4px;
-  right: 8px;
+  top: 10px;
+  right: 14px;
   width: 28px;
   height: 28px;
   border: none;
@@ -225,7 +225,7 @@
 }
 
 .lucky-wheel-error {
-  margin: -2px 0 10px;
+  margin: 12px 0 10px;
   padding: 0;
   color: #8c1d27;
   font-size: 13px;
