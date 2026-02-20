@@ -27,13 +27,49 @@ import { useState, useCallback, useRef, useEffect } from "react";
 
 async function checkAppEmbedEnabled(admin) {
   const EXTENSION_UID = "cf1449e6-459b-e542-07bc-86519a150ef9e95a1f96";
+  const EXTENSION_HANDLE = "lucky-wheel-extension";
+  const EMBED_BLOCK_HANDLE = "lucky_wheel";
   const CLIENT_ID = process.env.SHOPIFY_API_KEY || "";
+
+  const stripSettingsComments = (rawContent) => {
+    if (typeof rawContent !== "string") return "";
+
+    // Shopify may prepend UTF-8 BOM and one/more leading block comments.
+    let content = rawContent.replace(/^\uFEFF/, "").trimStart();
+    while (content.startsWith("/*")) {
+      const commentEnd = content.indexOf("*/");
+      if (commentEnd === -1) break;
+      content = content.substring(commentEnd + 2).trimStart();
+    }
+    return content;
+  };
+
+  const isOurEmbedBlockType = (blockType) => {
+    if (typeof blockType !== "string") return false;
+    const normalized = blockType.toLowerCase();
+    const normalizedClientId = CLIENT_ID.toLowerCase();
+
+    const blockHandleMatch =
+      normalized.includes(`/blocks/${EMBED_BLOCK_HANDLE}/`) ||
+      normalized.endsWith(`/blocks/${EMBED_BLOCK_HANDLE}`) ||
+      normalized.includes("/blocks/lucky-wheel/") ||
+      normalized.endsWith("/blocks/lucky-wheel");
+
+    const appIdentityMatch =
+      normalized.includes(EXTENSION_UID.toLowerCase()) ||
+      normalized.includes(EXTENSION_HANDLE) ||
+      (normalizedClientId && normalized.includes(normalizedClientId));
+
+    return blockHandleMatch || appIdentityMatch;
+  };
 
   try {
     const response = await admin.graphql(`
       {
-        themes(first: 10, roles: [MAIN, DEVELOPMENT]) {
+        themes(first: 20) {
           nodes {
+            id
+            name
             role
             files(filenames: ["config/settings_data.json"]) {
               nodes {
@@ -49,30 +85,46 @@ async function checkAppEmbedEnabled(admin) {
       }
     `);
     const data = await response.json();
+
+    if (data?.errors) {
+      console.error("[checkAppEmbedEnabled] GraphQL errors:", JSON.stringify(data.errors));
+      return false;
+    }
+
     const themes = data?.data?.themes?.nodes || [];
+    console.log(`[checkAppEmbedEnabled] Found ${themes.length} themes`);
 
     for (const theme of themes) {
       const content = theme?.files?.nodes?.[0]?.body?.content;
+      console.log(`[checkAppEmbedEnabled] Theme: ${theme.name} (${theme.role}), has content: ${!!content}`);
       if (!content) continue;
+
+      const jsonContent = stripSettingsComments(content);
 
       let settings;
       try {
-        settings = JSON.parse(content);
-      } catch {
+        settings = JSON.parse(jsonContent);
+      } catch (parseErr) {
+        console.log(`[checkAppEmbedEnabled] JSON parse FAILED for ${theme.name}: ${parseErr.message} | content start: "${jsonContent?.substring(0, 120)}"`);
         continue;
       }
 
       const blocks = settings?.current?.blocks || {};
-      for (const block of Object.values(blocks)) {
+      const blockKeys = Object.keys(blocks);
+      console.log(`[checkAppEmbedEnabled] Blocks in ${theme.name}:`, blockKeys.length > 0 ? blockKeys : "none");
+
+      for (const [key, block] of Object.entries(blocks)) {
         if (typeof block.type !== "string") continue;
-        const isOurExtension =
-          block.type.includes(EXTENSION_UID) ||
-          (CLIENT_ID && block.type.includes(CLIENT_ID));
+        console.log(`[checkAppEmbedEnabled] Block "${key}": type=${block.type}, disabled=${block.disabled}`);
+        const isOurExtension = isOurEmbedBlockType(block.type);
         if (isOurExtension && block.disabled !== true) {
+          console.log("[checkAppEmbedEnabled] ✅ App embed is ENABLED");
           return true;
         }
       }
     }
+
+    console.log("[checkAppEmbedEnabled] ❌ App embed NOT found or disabled");
     return false;
   } catch (err) {
     console.error("[checkAppEmbedEnabled] Error:", err);
