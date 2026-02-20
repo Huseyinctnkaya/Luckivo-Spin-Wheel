@@ -503,6 +503,7 @@ export default function WheelEditor() {
       "every_day",
     ),
     hideOnMobileDevices: Boolean(parsedConfig.hideOnMobileDevices),
+    oneSpinPerEmail: parsedConfig.oneSpinPerEmail !== false,
     discountActivationTime: getValidOptionValue(
       DISCOUNT_ACTIVATION_TIME_OPTIONS,
       parsedConfig.discountActivationTime,
@@ -1794,6 +1795,24 @@ export default function WheelEditor() {
               >
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
                   <BlockStack gap="300">
+                    <Banner tone={config.oneSpinPerEmail ? "success" : "warning"}>
+                      <InlineStack align="space-between" blockAlign="center" wrap={false}>
+                        <BlockStack gap="100">
+                          <Text as="p" variant="headingSm" fontWeight="semibold">
+                            Important: One spin per email
+                          </Text>
+                          <Text as="p" tone="subdued">
+                            When enabled, the same email can spin this campaign only once.
+                          </Text>
+                        </BlockStack>
+                        <Checkbox
+                          labelHidden
+                          label="One spin per email"
+                          checked={config.oneSpinPerEmail}
+                          onChange={(checked) => handleConfigChange("oneSpinPerEmail", checked)}
+                        />
+                      </InlineStack>
+                    </Banner>
                     <Select
                       label="Trigger condition"
                       options={TRIGGER_CONDITION_OPTIONS}

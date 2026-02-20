@@ -52,6 +52,42 @@ export const action = async ({ request }) => {
                 return json({ error: "Wheel not found for this shop" }, { status: 404 });
             }
 
+            let wheelSettings = {};
+            try {
+                wheelSettings = JSON.parse(wheel.config || "{}");
+            } catch {
+                wheelSettings = {};
+            }
+
+            const oneSpinPerEmail = wheelSettings.oneSpinPerEmail !== false;
+            const rawEmail = String(email || "").trim();
+            const normalizedEmail = rawEmail.toLowerCase();
+
+            if (oneSpinPerEmail) {
+                if (!normalizedEmail) {
+                    return json(
+                        { error: wheelSettings.errorEmailInvalid || "Please enter a valid email address" },
+                        { status: 400 },
+                    );
+                }
+
+                const emailCandidates = Array.from(new Set([rawEmail, normalizedEmail])).filter(Boolean);
+                const existingSpin = await db.spin.findFirst({
+                    where: {
+                        wheelId: wheel.id,
+                        OR: emailCandidates.map((value) => ({ customerEmail: value })),
+                    },
+                    select: { id: true },
+                });
+
+                if (existingSpin) {
+                    return json(
+                        { error: wheelSettings.errorEmailAlreadyUsed || "This email has already been used" },
+                        { status: 409 },
+                    );
+                }
+            }
+
             // Calculate result based on probability
             const result = calculateSpinResult(wheel.segments);
 
@@ -59,7 +95,7 @@ export const action = async ({ request }) => {
             await db.spin.create({
                 data: {
                     wheelId: wheel.id,
-                    customerEmail: email,
+                    customerEmail: normalizedEmail || rawEmail || null,
                     result: result.label,
                     couponCode: result.value, // In real app, might generate a unique code here
                 }

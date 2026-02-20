@@ -275,14 +275,16 @@
   function applyFormFieldSettings() {
     const popupBehavior = getSetting(["popupBehavior"], "default");
     const spinFirstMode = popupBehavior === "spin_first";
+    const enforceUniqueEmail = Boolean(getSetting(["oneSpinPerEmail"], true));
     const disableAll = Boolean(getSetting(["disableAllFormFields"], false));
 
     const showName = !disableAll && Boolean(getSetting(["showNameField"], false));
-    const showEmail = !disableAll && getSetting(["showEmailField"], true) !== false;
+    const showEmailByConfig = getSetting(["showEmailField"], true) !== false;
     const showPhone = !disableAll && Boolean(getSetting(["showPhoneField"], false));
     const showConsent = !disableAll && Boolean(getSetting(["showConsentCheckbox"], false));
 
-    const shouldShowInputs = !spinFirstMode;
+    const shouldShowInputs = !spinFirstMode || enforceUniqueEmail;
+    const showEmail = shouldShowInputs && (enforceUniqueEmail || (!disableAll && showEmailByConfig));
 
     if (nameInput) {
       nameInput.placeholder = getSetting(["initialNamePlaceholder"], "Enter your name");
@@ -297,11 +299,10 @@
       ["initialEmailPlaceholder", "emailPlaceholder"],
       "Enter your email",
     );
-    emailInput.style.display = showEmail && shouldShowInputs ? "" : "none";
+    emailInput.style.display = showEmail ? "" : "none";
     emailInput.required =
       showEmail &&
-      shouldShowInputs &&
-      getSetting(["emailFieldRequirement"], "required") === "required";
+      (enforceUniqueEmail || getSetting(["emailFieldRequirement"], "required") === "required");
 
     if (phoneInput) {
       phoneInput.placeholder = getSetting(["initialPhonePlaceholder"], "Enter your phone number");
@@ -729,25 +730,30 @@
     if (!isSpinAllowed(true)) return false;
 
     const popupBehavior = getSetting(["popupBehavior"], "default");
-    if (popupBehavior === "spin_first") return true;
+    const enforceUniqueEmail = Boolean(getSetting(["oneSpinPerEmail"], true));
+    const spinFirstMode = popupBehavior === "spin_first";
+    if (spinFirstMode && !enforceUniqueEmail) return true;
 
     const disableAll = Boolean(getSetting(["disableAllFormFields"], false));
-    if (disableAll) return true;
+    if (disableAll && !enforceUniqueEmail) return true;
 
     const showName = Boolean(getSetting(["showNameField"], false));
-    const showEmail = getSetting(["showEmailField"], true) !== false;
+    const showEmailByConfig = getSetting(["showEmailField"], true) !== false;
     const showPhone = Boolean(getSetting(["showPhoneField"], false));
     const showConsent = Boolean(getSetting(["showConsentCheckbox"], false));
+    const shouldShowInputs = !spinFirstMode || enforceUniqueEmail;
+    const showEmail = shouldShowInputs && (enforceUniqueEmail || (!disableAll && showEmailByConfig));
 
     const { name, email, phone, consentAccepted } = getFormPayload();
 
-    if (showName && getSetting(["nameFieldRequirement"], "required") === "required" && !name) {
+    if (!disableAll && showName && getSetting(["nameFieldRequirement"], "required") === "required" && !name) {
       alert("Please enter your name");
       return false;
     }
 
     if (showEmail) {
-      const emailRequired = getSetting(["emailFieldRequirement"], "required") === "required";
+      const emailRequired =
+        enforceUniqueEmail || getSetting(["emailFieldRequirement"], "required") === "required";
       if (emailRequired && !email) {
         alert(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
         return false;
@@ -758,12 +764,18 @@
       }
     }
 
-    if (showPhone && getSetting(["phoneFieldRequirement"], "required") === "required" && !phone) {
+    if (
+      !disableAll &&
+      showPhone &&
+      shouldShowInputs &&
+      getSetting(["phoneFieldRequirement"], "required") === "required" &&
+      !phone
+    ) {
       alert("Please enter your phone number");
       return false;
     }
 
-    if (showConsent && !consentAccepted) {
+    if (!disableAll && showConsent && shouldShowInputs && !consentAccepted) {
       alert("Please accept the consent checkbox");
       return false;
     }
