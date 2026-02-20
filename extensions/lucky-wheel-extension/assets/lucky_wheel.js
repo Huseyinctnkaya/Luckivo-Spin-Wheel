@@ -267,6 +267,50 @@
     }
   }
 
+  function setImportantStyle(element, property, value) {
+    if (!element) return;
+    element.style.setProperty(property, value, "important");
+  }
+
+  function enforcePopupSpacing() {
+    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+    setImportantStyle(titleEl, "display", "block");
+    setImportantStyle(titleEl, "margin", "0");
+    setImportantStyle(titleEl, "margin-top", isDesktop ? "0" : "14px");
+    setImportantStyle(titleEl, "padding", "0");
+    setImportantStyle(titleEl, "min-height", "0");
+    setImportantStyle(descriptionEl, "display", "block");
+    setImportantStyle(descriptionEl, "margin", "0");
+    setImportantStyle(descriptionEl, "margin-top", "6px");
+    setImportantStyle(descriptionEl, "padding", "0");
+    setImportantStyle(descriptionEl, "min-height", "0");
+    setImportantStyle(resultHeadingEl, "display", "block");
+    setImportantStyle(resultHeadingEl, "margin", "0");
+    setImportantStyle(resultHeadingEl, "margin-top", "2px");
+    setImportantStyle(resultHeadingEl, "padding", "0");
+    setImportantStyle(resultHeadingEl, "min-height", "0");
+    setImportantStyle(resultDescriptionEl, "display", "block");
+    setImportantStyle(resultDescriptionEl, "margin", "0");
+    setImportantStyle(resultDescriptionEl, "margin-top", "6px");
+    setImportantStyle(resultDescriptionEl, "padding", "0");
+    setImportantStyle(resultDescriptionEl, "min-height", "0");
+    setImportantStyle(resultEmailSentEl, "display", "block");
+    setImportantStyle(resultEmailSentEl, "margin", "0");
+    setImportantStyle(resultEmailSentEl, "margin-top", "4px");
+    setImportantStyle(resultEmailSentEl, "padding", "0");
+    setImportantStyle(resultEmailSentEl, "min-height", "0");
+    setImportantStyle(resultRewardEl, "display", "block");
+    setImportantStyle(resultRewardEl, "margin", "0");
+    setImportantStyle(resultRewardEl, "margin-top", "6px");
+    setImportantStyle(resultRewardEl, "padding", "0");
+    setImportantStyle(resultRewardEl, "min-height", "0");
+    setImportantStyle(infoTextEl, "display", "block");
+    setImportantStyle(infoTextEl, "margin", "0");
+    setImportantStyle(infoTextEl, "margin-top", "10px");
+    setImportantStyle(infoTextEl, "padding", "0");
+    setImportantStyle(infoTextEl, "min-height", "0");
+  }
+
   function setFormError(message) {
     if (!formErrorEl) return;
     const safeMessage = String(message || "").trim();
@@ -415,6 +459,7 @@
       modal.style.backgroundImage = "none";
     }
 
+    enforcePopupSpacing();
     applyFormFieldSettings();
     applyLogoSettings();
     applySideTriggerStyles();
@@ -964,6 +1009,7 @@
         if (toBoolean(getSetting(["hideOnMobileDevices"], false), false) && isMobileViewport()) {
           closePopup();
         }
+        enforcePopupSpacing();
         updateSideTriggerVisibility();
       });
     } catch (error) {
