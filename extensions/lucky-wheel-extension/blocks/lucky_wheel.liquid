@@ -10,30 +10,43 @@
       <button class="lucky-wheel-close" id="lucky-wheel-close">&times;</button>
       
       <div class="lucky-wheel-content">
-        <h2 id="lucky-wheel-title">Spin to Win!</h2>
-        <p id="lucky-wheel-description">Try your luck and win amazing prizes!</p>
-        
         <div class="wheel-wrapper">
           <canvas id="wheel-canvas" width="400" height="400"></canvas>
-          <div class="wheel-pointer"></div>
-        </div>
-        
-        <div class="lucky-wheel-form" id="lucky-wheel-form">
-          <input type="email" id="lucky-wheel-email" placeholder="Enter your email" required>
-          <button type="button" id="lucky-wheel-spin-btn">SPIN NOW</button>
-          <p id="lucky-wheel-info-text">By entering, you agree to receive updates and offers from our store.</p>
+          <div class="wheel-pointer" aria-hidden="true">
+            <svg width="34" height="24" viewBox="0 0 34 24" fill="none">
+              <path
+                d="M2 12L9.5 5C11.8 2.8 14.9 1.5 18.1 1.5C24.6 1.5 30 6.9 30 13.4C30 18.9 25.5 22.5 20 22.5C15.7 22.5 11.6 20.7 8.9 17.9L2 12Z"
+                fill="#ffffff"
+                stroke="#f1ad46"
+                stroke-width="4"
+                stroke-linejoin="round"
+              />
+              <circle cx="19.5" cy="12.5" r="4.2" fill="#ffffff" />
+            </svg>
+          </div>
         </div>
 
-        <div id="lucky-wheel-result" style="display: none;">
-          <h3 id="lucky-wheel-result-heading">🎁 You Won!</h3>
-          <p id="lucky-wheel-result-description">Copy your code and enjoy your reward at checkout.</p>
-          <p id="lucky-wheel-result-email-sent">Check your email for your discount code!</p>
-          <p id="lucky-wheel-result-reward"></p>
-          <div id="lucky-wheel-code-row" class="lucky-wheel-code-row">
-            <span id="lucky-wheel-coupon">CODE123</span>
-            <button type="button" id="lucky-wheel-copy-btn">Copy Code</button>
+        <div class="lucky-wheel-panel">
+          <h2 id="lucky-wheel-title">Spin to Win!</h2>
+          <p id="lucky-wheel-description">Try your luck and win amazing prizes!</p>
+
+          <div class="lucky-wheel-form" id="lucky-wheel-form">
+            <input type="email" id="lucky-wheel-email" placeholder="Enter your email" required>
+            <button type="button" id="lucky-wheel-spin-btn">SPIN NOW</button>
+            <p id="lucky-wheel-info-text">By entering, you agree to receive updates and offers from our store.</p>
           </div>
-          <button type="button" id="lucky-wheel-continue-btn">Continue Shopping</button>
+
+          <div id="lucky-wheel-result" style="display: none;">
+            <h3 id="lucky-wheel-result-heading">🎁 You Won!</h3>
+            <p id="lucky-wheel-result-description">Copy your code and enjoy your reward at checkout.</p>
+            <p id="lucky-wheel-result-email-sent">Check your email for your discount code!</p>
+            <p id="lucky-wheel-result-reward"></p>
+            <div id="lucky-wheel-code-row" class="lucky-wheel-code-row">
+              <span id="lucky-wheel-coupon">CODE123</span>
+              <button type="button" id="lucky-wheel-copy-btn">Copy Code</button>
+            </div>
+            <button type="button" id="lucky-wheel-continue-btn">Continue Shopping</button>
+          </div>
         </div>
       </div>
     </div>

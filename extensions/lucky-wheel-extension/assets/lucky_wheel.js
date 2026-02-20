@@ -271,8 +271,9 @@
     ctx.strokeStyle = "#ffffff";
     ctx.stroke();
 
-    ctx.fillStyle = wheelSettings.wheelTextColor || "#1f1f1f";
-    ctx.font = "700 38px sans-serif";
+    const centerFontSize = Math.max(16, Math.round(canvas.width * 0.045));
+    ctx.fillStyle = wheelTextColor;
+    ctx.font = `700 ${centerFontSize}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("SPIN", centerX, centerY);
@@ -302,7 +303,7 @@
     if (form) form.style.display = "none";
     if (!resultDiv) return;
 
-    resultDiv.style.display = "block";
+    resultDiv.style.display = "flex";
 
     const noLuckByCode = isNoRewardValue(result?.couponCode);
     const noLuckByLabel = /try\s*again|no\s*luck/i.test(String(result?.label || ""));
