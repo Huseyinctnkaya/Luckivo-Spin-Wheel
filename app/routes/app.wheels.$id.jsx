@@ -546,10 +546,14 @@ export default function WheelEditor() {
       parsedConfig.initialDescription ||
       parsedConfig.description ||
       "Spin the wheel and unlock exclusive rewards instantly.",
+    initialNamePlaceholder:
+      parsedConfig.initialNamePlaceholder || "Enter your name",
     initialEmailPlaceholder:
       parsedConfig.initialEmailPlaceholder ||
       parsedConfig.emailPlaceholder ||
       "Enter your email",
+    initialPhonePlaceholder:
+      parsedConfig.initialPhonePlaceholder || "Enter your phone number",
     initialCtaText:
       parsedConfig.initialCtaText ||
       parsedConfig.ctaText ||
@@ -609,6 +613,11 @@ export default function WheelEditor() {
     ),
     disableAllFormFields: Boolean(parsedConfig.disableAllFormFields),
     showNameField: Boolean(parsedConfig.showNameField),
+    nameFieldRequirement: getValidOptionValue(
+      EMAIL_REQUIREMENT_OPTIONS,
+      parsedConfig.nameFieldRequirement,
+      "required",
+    ),
     showEmailField: parsedConfig.showEmailField !== false,
     emailFieldRequirement: getValidOptionValue(
       EMAIL_REQUIREMENT_OPTIONS,
@@ -616,6 +625,11 @@ export default function WheelEditor() {
       "required",
     ),
     showPhoneField: Boolean(parsedConfig.showPhoneField),
+    phoneFieldRequirement: getValidOptionValue(
+      EMAIL_REQUIREMENT_OPTIONS,
+      parsedConfig.phoneFieldRequirement,
+      "required",
+    ),
     showConsentCheckbox: Boolean(parsedConfig.showConsentCheckbox),
   });
   const [editingDiscountIndex, setEditingDiscountIndex] = useState(null);
@@ -1231,20 +1245,54 @@ export default function WheelEditor() {
       </div>
 
       <div style={{ marginTop: "14px" }}>
-        <input
-          readOnly
-          value={config.initialEmailPlaceholder}
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            borderRadius: "10px",
-            border: "1px solid #d2d5d8",
-            padding: "11px 12px",
-            background: "#fff",
-            color: "#8c9196",
-            marginBottom: "12px",
-          }}
-        />
+        {!config.disableAllFormFields && config.showNameField ? (
+          <input
+            readOnly
+            value={config.initialNamePlaceholder}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              borderRadius: "10px",
+              border: "1px solid #d2d5d8",
+              padding: "11px 12px",
+              background: "#fff",
+              color: "#8c9196",
+              marginBottom: "12px",
+            }}
+          />
+        ) : null}
+        {!config.disableAllFormFields && config.showEmailField ? (
+          <input
+            readOnly
+            value={config.initialEmailPlaceholder}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              borderRadius: "10px",
+              border: "1px solid #d2d5d8",
+              padding: "11px 12px",
+              background: "#fff",
+              color: "#8c9196",
+              marginBottom: "12px",
+            }}
+          />
+        ) : null}
+        {!config.disableAllFormFields && config.showPhoneField ? (
+          <input
+            readOnly
+            value={config.initialPhonePlaceholder}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              borderRadius: "10px",
+              border: "1px solid #d2d5d8",
+              padding: "11px 12px",
+              background: "#fff",
+              color: "#8c9196",
+              marginBottom: "12px",
+            }}
+          />
+        ) : null}
         <button
           type="button"
           style={{
@@ -1920,18 +1968,43 @@ export default function WheelEditor() {
                 </Box>
 
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
-                      Name Field
-                    </Text>
-                    <Checkbox
-                      labelHidden
-                      label="Name Field"
-                      checked={config.showNameField}
-                      disabled={config.disableAllFormFields}
-                      onChange={(checked) => handleConfigChange("showNameField", checked)}
-                    />
-                  </InlineStack>
+                  <BlockStack gap="300">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
+                        Name Field
+                      </Text>
+                      <Checkbox
+                        labelHidden
+                        label="Name Field"
+                        checked={config.showNameField}
+                        disabled={config.disableAllFormFields}
+                        onChange={(checked) => handleConfigChange("showNameField", checked)}
+                      />
+                    </InlineStack>
+
+                    {config.showNameField && !config.disableAllFormFields ? (
+                      <Box background="bg-surface-secondary" padding="300" borderRadius="200">
+                        <InlineGrid columns={2} gap="300">
+                          <Select
+                            label="Name field requirement"
+                            options={EMAIL_REQUIREMENT_OPTIONS}
+                            value={config.nameFieldRequirement || "required"}
+                            onChange={(value) =>
+                              handleConfigChange("nameFieldRequirement", value)
+                            }
+                          />
+                          <TextField
+                            label="Name placeholder text"
+                            value={config.initialNamePlaceholder}
+                            onChange={(value) =>
+                              handleConfigChange("initialNamePlaceholder", value)
+                            }
+                            autoComplete="off"
+                          />
+                        </InlineGrid>
+                      </Box>
+                    ) : null}
+                  </BlockStack>
                 </Box>
 
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
@@ -1975,18 +2048,43 @@ export default function WheelEditor() {
                 </Box>
 
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
-                  <InlineStack align="space-between" blockAlign="center">
-                    <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
-                      Phone Field
-                    </Text>
-                    <Checkbox
-                      labelHidden
-                      label="Phone Field"
-                      checked={config.showPhoneField}
-                      disabled={config.disableAllFormFields}
-                      onChange={(checked) => handleConfigChange("showPhoneField", checked)}
-                    />
-                  </InlineStack>
+                  <BlockStack gap="300">
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
+                        Phone Field
+                      </Text>
+                      <Checkbox
+                        labelHidden
+                        label="Phone Field"
+                        checked={config.showPhoneField}
+                        disabled={config.disableAllFormFields}
+                        onChange={(checked) => handleConfigChange("showPhoneField", checked)}
+                      />
+                    </InlineStack>
+
+                    {config.showPhoneField && !config.disableAllFormFields ? (
+                      <Box background="bg-surface-secondary" padding="300" borderRadius="200">
+                        <InlineGrid columns={2} gap="300">
+                          <Select
+                            label="Phone field requirement"
+                            options={EMAIL_REQUIREMENT_OPTIONS}
+                            value={config.phoneFieldRequirement}
+                            onChange={(value) =>
+                              handleConfigChange("phoneFieldRequirement", value)
+                            }
+                          />
+                          <TextField
+                            label="Phone placeholder text"
+                            value={config.initialPhonePlaceholder}
+                            onChange={(value) =>
+                              handleConfigChange("initialPhonePlaceholder", value)
+                            }
+                            autoComplete="off"
+                          />
+                        </InlineGrid>
+                      </Box>
+                    ) : null}
+                  </BlockStack>
                 </Box>
 
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
