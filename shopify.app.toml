@@ -2,7 +2,7 @@
 
 client_id = "7dab8c453f7b44b3c15da2b89b004213"
 name = "Luckivo - Spin Wheel"
-application_url = "https://rob-pollution-birthday-cases.trycloudflare.com"
+application_url = "https://volunteer-undertake-packing-huntington.trycloudflare.com"
 embedded = true
 
 [build]
@@ -24,9 +24,9 @@ api_version = "2026-04"
 scopes = "write_products,read_discounts,write_discounts,read_customers,write_customers,read_themes"
 
 [auth]
-redirect_urls = [ "https://rob-pollution-birthday-cases.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://volunteer-undertake-packing-huntington.trycloudflare.com/api/auth" ]
 
 [app_proxy]
-url = "https://rob-pollution-birthday-cases.trycloudflare.com/app/proxy"
+url = "https://volunteer-undertake-packing-huntington.trycloudflare.com/app/proxy"
 subpath = "wheel-proxy"
 prefix = "apps"
