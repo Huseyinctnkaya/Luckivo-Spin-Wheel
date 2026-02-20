@@ -68,9 +68,6 @@ async function checkAppEmbedEnabled(admin) {
       {
         themes(first: 20) {
           nodes {
-            id
-            name
-            role
             files(filenames: ["config/settings_data.json"]) {
               nodes {
                 body {
@@ -92,11 +89,9 @@ async function checkAppEmbedEnabled(admin) {
     }
 
     const themes = data?.data?.themes?.nodes || [];
-    console.log(`[checkAppEmbedEnabled] Found ${themes.length} themes`);
 
     for (const theme of themes) {
       const content = theme?.files?.nodes?.[0]?.body?.content;
-      console.log(`[checkAppEmbedEnabled] Theme: ${theme.name} (${theme.role}), has content: ${!!content}`);
       if (!content) continue;
 
       const jsonContent = stripSettingsComments(content);
@@ -104,27 +99,20 @@ async function checkAppEmbedEnabled(admin) {
       let settings;
       try {
         settings = JSON.parse(jsonContent);
-      } catch (parseErr) {
-        console.log(`[checkAppEmbedEnabled] JSON parse FAILED for ${theme.name}: ${parseErr.message} | content start: "${jsonContent?.substring(0, 120)}"`);
+      } catch {
         continue;
       }
 
       const blocks = settings?.current?.blocks || {};
-      const blockKeys = Object.keys(blocks);
-      console.log(`[checkAppEmbedEnabled] Blocks in ${theme.name}:`, blockKeys.length > 0 ? blockKeys : "none");
-
-      for (const [key, block] of Object.entries(blocks)) {
+      for (const block of Object.values(blocks)) {
         if (typeof block.type !== "string") continue;
-        console.log(`[checkAppEmbedEnabled] Block "${key}": type=${block.type}, disabled=${block.disabled}`);
         const isOurExtension = isOurEmbedBlockType(block.type);
         if (isOurExtension && block.disabled !== true) {
-          console.log("[checkAppEmbedEnabled] ✅ App embed is ENABLED");
           return true;
         }
       }
     }
 
-    console.log("[checkAppEmbedEnabled] ❌ App embed NOT found or disabled");
     return false;
   } catch (err) {
     console.error("[checkAppEmbedEnabled] Error:", err);
