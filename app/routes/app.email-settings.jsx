@@ -14,11 +14,13 @@ import {
   Banner,
   Divider,
   ColorPicker,
+  Modal,
   hsbToHex,
   hexToRgb,
   rgbToHsb,
 } from "@shopify/polaris";
-import { useState, useCallback, useEffect } from "react";
+import { SaveBar } from "@shopify/app-bridge-react";
+import { useState, useCallback, useMemo } from "react";
 
 function toHsbColor(hex) {
   try {
@@ -149,14 +151,38 @@ export default function EmailSettingsPage() {
   const [ctaText, setCtaText] = useState(loaded.ctaText);
   const [ctaUrl, setCtaUrl] = useState(loaded.ctaUrl);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
 
-  useEffect(() => {
-    if (navigation.state === "idle" && saved) {
-      const t = setTimeout(() => setSaved(false), 2000);
-      return () => clearTimeout(t);
-    }
-  }, [navigation.state, saved]);
+  const savedSnapshot = useMemo(
+    () => JSON.stringify({
+      enabled: loaded.enabled,
+      fromEmail: loaded.fromEmail,
+      fromName: loaded.fromName,
+      subject: loaded.subject,
+      headerTitle: loaded.headerTitle,
+      headerSubtitle: loaded.headerSubtitle,
+      headerEmoji: loaded.headerEmoji,
+      brandColor: normalizeHex(loaded.brandColor),
+      ctaText: loaded.ctaText,
+      ctaUrl: loaded.ctaUrl,
+    }),
+    [loaded],
+  );
+
+  const currentSnapshot = JSON.stringify({
+    enabled,
+    fromEmail,
+    fromName,
+    subject,
+    headerTitle,
+    headerSubtitle,
+    headerEmoji,
+    brandColor,
+    ctaText,
+    ctaUrl,
+  });
+
+  const isDirty = savedSnapshot !== currentSnapshot;
 
   const handleBrandColorChange = useCallback((hsb) => {
     setBrandColorHsb(hsb);
@@ -179,20 +205,44 @@ export default function EmailSettingsPage() {
       },
       { method: "post" },
     );
-    setSaved(true);
   }, [enabled, fromEmail, fromName, subject, headerTitle, headerSubtitle, headerEmoji, brandColor, ctaText, ctaUrl, submit]);
+
+  const handleDiscard = useCallback(() => {
+    setEnabled(loaded.enabled);
+    setFromEmail(loaded.fromEmail);
+    setFromName(loaded.fromName);
+    setSubject(loaded.subject);
+    setHeaderTitle(loaded.headerTitle);
+    setHeaderSubtitle(loaded.headerSubtitle);
+    setHeaderEmoji(loaded.headerEmoji);
+    setBrandColor(normalizeHex(loaded.brandColor));
+    setBrandColorHsb(toHsbColor(loaded.brandColor));
+    setCtaText(loaded.ctaText);
+    setCtaUrl(loaded.ctaUrl);
+  }, [loaded]);
 
   const previewHtml = buildPreviewHtml({ headerTitle, headerSubtitle, headerEmoji, brandColor, ctaText, ctaUrl });
 
   return (
+    <>
+      <SaveBar open={isDirty}>
+        <button variant="primary" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Kaydediliyor..." : "Kaydet"}
+        </button>
+        <button onClick={handleDiscard} disabled={isSaving}>
+          Vazgeç
+        </button>
+      </SaveBar>
+
     <Page
       title="Email Settings"
       subtitle="Configure discount code emails sent to customers after spinning"
-      primaryAction={{
-        content: isSaving ? "Saving..." : saved ? "Saved!" : "Save",
-        onAction: handleSave,
-        disabled: isSaving,
-      }}
+      secondaryActions={[
+        {
+          content: "Preview",
+          onAction: () => setPreviewModalOpen(true),
+        },
+      ]}
     >
       <Layout>
         {!loaded.hasResendKey && (
@@ -206,8 +256,7 @@ export default function EmailSettingsPage() {
           </Layout.Section>
         )}
 
-        {/* Left column — settings (narrow) */}
-        <Layout.Section variant="oneThird">
+        <Layout.Section>
           <BlockStack gap="400">
 
             {/* Send settings */}
@@ -415,46 +464,42 @@ export default function EmailSettingsPage() {
           </BlockStack>
         </Layout.Section>
 
-        {/* Right column — live preview (wide) */}
-        <Layout.Section>
-          <div style={{ position: "sticky", top: "16px" }}>
-            <Card>
-              <BlockStack gap="300">
-                <Text as="h2" variant="headingMd" fontWeight="semibold">Preview</Text>
-                <Text as="p" variant="bodySm" tone="subdued">Live preview with sample data</Text>
-                <div
-                  style={{
-                    background: "#f4f4f5",
-                    borderRadius: "8px",
-                    border: "1px solid #e1e3e5",
-                    overflowY: "auto",
-                    maxHeight: "700px",
-                    display: "flex",
-                    justifyContent: "center",
-                    padding: "0",
-                  }}
-                >
-                  <iframe
-                    srcDoc={previewHtml}
-                    title="Email preview"
-                    style={{
-                      width: "560px",
-                      height: "740px",
-                      border: "none",
-                      display: "block",
-                      flexShrink: 0,
-                    }}
-                    sandbox="allow-same-origin"
-                  />
-                </div>
-              </BlockStack>
-            </Card>
-          </div>
-        </Layout.Section>
-
       </Layout>
 
       <Box paddingBlockEnd="800" />
+
+      <Modal
+        open={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        title="Email Preview"
+        size="large"
+      >
+        <Modal.Section>
+          <div
+            style={{
+              background: "#f4f4f5",
+              borderRadius: "8px",
+              display: "flex",
+              justifyContent: "center",
+              padding: "0",
+            }}
+          >
+            <iframe
+              srcDoc={previewHtml}
+              title="Email preview"
+              style={{
+                width: "560px",
+                height: "720px",
+                border: "none",
+                display: "block",
+                flexShrink: 0,
+              }}
+              sandbox="allow-same-origin"
+            />
+          </div>
+        </Modal.Section>
+      </Modal>
     </Page>
+    </>
   );
 }

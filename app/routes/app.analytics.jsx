@@ -314,11 +314,11 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Campaign Performance */}
+        {/* Wheel Performance */}
         {wheelPerformance.length === 0 ? (
           <Card>
             <EmptyState
-              heading="No campaigns yet"
+              heading="No wheels yet"
               action={{ content: "Create Wheel", url: "/app/wheels/new" }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
@@ -329,14 +329,14 @@ export default function AnalyticsPage() {
           <Card padding="0">
             <Box padding="400" paddingBlockEnd="200">
               <Text variant="headingMd" as="h2" fontWeight="bold">
-                Campaign Performance
+                Wheel Performance
               </Text>
             </Box>
             <IndexTable
-              resourceName={{ singular: "campaign", plural: "campaigns" }}
+              resourceName={{ singular: "wheel", plural: "wheels" }}
               itemCount={wheelPerformance.length}
               headings={[
-                { title: "Campaign" },
+                { title: "Wheel" },
                 { title: "Status" },
                 { title: "Impressions", alignment: "end" },
                 { title: "Spins", alignment: "end" },
@@ -411,7 +411,7 @@ export default function AnalyticsPage() {
               resourceName={{ singular: "spin", plural: "spins" }}
               itemCount={recentSpins.length}
               headings={[
-                { title: "Campaign" },
+                { title: "Wheel" },
                 { title: "Email" },
                 { title: "Prize Won" },
                 { title: "Coupon Code" },
