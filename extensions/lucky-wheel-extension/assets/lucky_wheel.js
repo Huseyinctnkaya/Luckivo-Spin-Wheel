@@ -200,7 +200,7 @@
     if (!isDisplayPageAllowed() || !isDisplayDayAllowed()) {
       return false;
     }
-    return isSpinAllowed(false);
+    return true;
   }
 
   function getSegmentSlices(segments) {
@@ -929,7 +929,8 @@
 
   async function initWheel() {
     try {
-      const response = await fetch(`${proxyUrl}/active-wheel`);
+      const activeWheelUrl = `${proxyUrl}/active-wheel?ts=${Date.now()}`;
+      const response = await fetch(activeWheelUrl, { cache: "no-store" });
       const contentType = response.headers.get("content-type") || "";
 
       if (!response.ok || !contentType.includes("application/json")) {

@@ -4,9 +4,15 @@ import db from "../db.server";
 
 export const loader = async ({ request }) => {
     try {
+        const noStoreHeaders = {
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+            Pragma: "no-cache",
+            Expires: "0",
+        };
+
         const { session } = await authenticate.public.appProxy(request);
 
-        if (!session) return json({ error: "Unauthorized" }, { status: 401 });
+        if (!session) return json({ error: "Unauthorized" }, { status: 401, headers: noStoreHeaders });
 
         const { pathname } = new URL(request.url);
 
@@ -14,16 +20,17 @@ export const loader = async ({ request }) => {
         if (pathname.endsWith("/active-wheel")) {
             const wheel = await db.wheel.findFirst({
                 where: { shop: session.shop, isActive: true },
-                include: { segments: true }
+                include: { segments: true },
+                orderBy: { updatedAt: "desc" },
             });
 
-            return json({ wheel });
+            return json({ wheel }, { headers: noStoreHeaders });
         }
 
-        return json({ error: "Not Found" }, { status: 404 });
+        return json({ error: "Not Found" }, { status: 404, headers: noStoreHeaders });
     } catch (error) {
         console.error("App proxy loader failed:", error);
-        return json({ error: "Proxy loader failed" }, { status: 500 });
+        return json({ error: "Proxy loader failed" }, { status: 500, headers: { "Cache-Control": "no-store" } });
     }
 };
 
