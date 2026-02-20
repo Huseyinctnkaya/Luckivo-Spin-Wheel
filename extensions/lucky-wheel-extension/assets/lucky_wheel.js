@@ -10,7 +10,11 @@
   const infoTextEl = document.getElementById("lucky-wheel-info-text");
   const closeBtn = document.getElementById("lucky-wheel-close");
   const spinBtn = document.getElementById("lucky-wheel-spin-btn");
+  const nameInput = document.getElementById("lucky-wheel-name");
   const emailInput = document.getElementById("lucky-wheel-email");
+  const phoneInput = document.getElementById("lucky-wheel-phone");
+  const consentRowEl = document.getElementById("lucky-wheel-consent-row");
+  const consentCheckbox = document.getElementById("lucky-wheel-consent-checkbox");
   const form = document.getElementById("lucky-wheel-form");
   const resultDiv = document.getElementById("lucky-wheel-result");
   const resultHeadingEl = document.getElementById("lucky-wheel-result-heading");
@@ -21,6 +25,10 @@
   const couponEl = document.getElementById("lucky-wheel-coupon");
   const copyBtn = document.getElementById("lucky-wheel-copy-btn");
   const continueBtn = document.getElementById("lucky-wheel-continue-btn");
+  const topLogoEl = document.getElementById("lucky-wheel-top-logo");
+  const topLogoImg = document.getElementById("lucky-wheel-top-logo-img");
+  const centerLogoEl = document.getElementById("lucky-wheel-center-logo");
+  const centerLogoImg = document.getElementById("lucky-wheel-center-logo-img");
   const canvas = document.getElementById("wheel-canvas");
   const ctx = canvas ? canvas.getContext("2d") : null;
 
@@ -30,6 +38,14 @@
   let wheelSettings = {};
   let isSpinning = false;
   let currentRotation = 0;
+  let sideTriggerEl = null;
+  let sideTriggerLabelEl = null;
+  let sideTriggerIconEl = null;
+  let countdownEl = null;
+  let countdownTimeEl = null;
+  let countdownCodeEl = null;
+  let countdownCloseEl = null;
+  let countdownInterval = null;
 
   const POINTER_BORDER_COLOR = "#f1ad46";
   const DEFAULT_WHEEL_TEXT_COLOR = "#4a1e00";
@@ -61,6 +77,124 @@
 
   function getSegments() {
     return Array.isArray(wheelConfig?.segments) ? wheelConfig.segments : [];
+  }
+
+  function isMobileViewport() {
+    return window.matchMedia("(max-width: 767px)").matches;
+  }
+
+  function normalizedPathname() {
+    return (window.location.pathname || "/").toLowerCase().replace(/\/+$/, "") || "/";
+  }
+
+  function isHomePath(pathname) {
+    if (pathname === "/") return true;
+    const parts = pathname.split("/").filter(Boolean);
+    return parts.length === 1 && /^[a-z]{2}(?:-[a-z]{2})?$/.test(parts[0]);
+  }
+
+  function isDisplayPageAllowed() {
+    const displayOn = getSetting(["displayOn"], "all_pages");
+    const path = normalizedPathname();
+
+    switch (displayOn) {
+      case "homepage_only":
+        return isHomePath(path);
+      case "product_pages":
+        return path.includes("/products/");
+      case "cart_page":
+        return path === "/cart" || path.endsWith("/cart");
+      case "all_pages":
+      default:
+        return true;
+    }
+  }
+
+  function isDisplayDayAllowed() {
+    const displayOnDays = getSetting(["displayOnDays"], "every_day");
+    const day = new Date().getDay();
+
+    if (displayOnDays === "weekdays") return day >= 1 && day <= 5;
+    if (displayOnDays === "weekends") return day === 0 || day === 6;
+    return true;
+  }
+
+  function getVisitorStorageKey() {
+    if (!wheelConfig?.id) return null;
+    return `luckivo-wheel:${window.location.hostname}:${wheelConfig.id}`;
+  }
+
+  function readVisitorState() {
+    const key = getVisitorStorageKey();
+    if (!key) return {};
+
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeVisitorState(nextState) {
+    const key = getVisitorStorageKey();
+    if (!key) return;
+
+    try {
+      localStorage.setItem(key, JSON.stringify(nextState));
+    } catch {
+      // Ignore storage failures (private mode / blocked storage).
+    }
+  }
+
+  function sameLocalDay(dateA, dateB) {
+    return (
+      dateA.getFullYear() === dateB.getFullYear() &&
+      dateA.getMonth() === dateB.getMonth() &&
+      dateA.getDate() === dateB.getDate()
+    );
+  }
+
+  function isSpinAllowed(showError = false) {
+    const mode = getSetting(["spinFrequency"], "one_time_only");
+    const state = readVisitorState();
+    const lastSpinAt = state?.lastSpinAt ? new Date(state.lastSpinAt) : null;
+
+    let allowed = true;
+    if (mode === "one_time_only") {
+      allowed = !lastSpinAt;
+    } else if (mode === "once_per_day") {
+      allowed = !lastSpinAt || !sameLocalDay(lastSpinAt, new Date());
+    }
+
+    if (!allowed && showError) {
+      alert(
+        getSetting(
+          ["errorFrequencyLimitExceeded", "errorOneTimeOnly", "errorTryAgainLater"],
+          "Please try again later when you are eligible.",
+        ),
+      );
+    }
+
+    return allowed;
+  }
+
+  function markSpinPerformed() {
+    writeVisitorState({
+      lastSpinAt: new Date().toISOString(),
+    });
+  }
+
+  function isDisplayAllowed() {
+    if (Boolean(getSetting(["hideOnMobileDevices"], false)) && isMobileViewport()) {
+      return false;
+    }
+    if (!isDisplayPageAllowed() || !isDisplayDayAllowed()) {
+      return false;
+    }
+    return isSpinAllowed(false);
   }
 
   function getSegmentSlices(segments) {
@@ -116,20 +250,85 @@
     }
   }
 
+  function applyLogoSettings() {
+    if (!topLogoEl || !topLogoImg || !centerLogoEl || !centerLogoImg) return;
+
+    const logoImageUrl = String(getSetting(["logoImageUrl"], "") || "").trim();
+    const logoPosition = getSetting(["logoPosition"], "center_of_wheel");
+
+    if (!logoImageUrl) {
+      topLogoEl.style.display = "none";
+      centerLogoEl.style.display = "none";
+      return;
+    }
+
+    topLogoImg.src = logoImageUrl;
+    centerLogoImg.src = logoImageUrl;
+
+    const showTopLogo = logoPosition === "top_of_popup" || logoPosition === "both";
+    const showCenterLogo = logoPosition === "center_of_wheel" || logoPosition === "both";
+
+    topLogoEl.style.display = showTopLogo ? "flex" : "none";
+    centerLogoEl.style.display = showCenterLogo ? "block" : "none";
+  }
+
+  function applyFormFieldSettings() {
+    const popupBehavior = getSetting(["popupBehavior"], "default");
+    const spinFirstMode = popupBehavior === "spin_first";
+    const disableAll = Boolean(getSetting(["disableAllFormFields"], false));
+
+    const showName = !disableAll && Boolean(getSetting(["showNameField"], false));
+    const showEmail = !disableAll && getSetting(["showEmailField"], true) !== false;
+    const showPhone = !disableAll && Boolean(getSetting(["showPhoneField"], false));
+    const showConsent = !disableAll && Boolean(getSetting(["showConsentCheckbox"], false));
+
+    const shouldShowInputs = !spinFirstMode;
+
+    if (nameInput) {
+      nameInput.placeholder = getSetting(["initialNamePlaceholder"], "Enter your name");
+      nameInput.style.display = showName && shouldShowInputs ? "" : "none";
+      nameInput.required =
+        showName &&
+        shouldShowInputs &&
+        getSetting(["nameFieldRequirement"], "required") === "required";
+    }
+
+    emailInput.placeholder = getSetting(
+      ["initialEmailPlaceholder", "emailPlaceholder"],
+      "Enter your email",
+    );
+    emailInput.style.display = showEmail && shouldShowInputs ? "" : "none";
+    emailInput.required =
+      showEmail &&
+      shouldShowInputs &&
+      getSetting(["emailFieldRequirement"], "required") === "required";
+
+    if (phoneInput) {
+      phoneInput.placeholder = getSetting(["initialPhonePlaceholder"], "Enter your phone number");
+      phoneInput.style.display = showPhone && shouldShowInputs ? "" : "none";
+      phoneInput.required =
+        showPhone &&
+        shouldShowInputs &&
+        getSetting(["phoneFieldRequirement"], "required") === "required";
+    }
+
+    if (consentRowEl && consentCheckbox) {
+      consentRowEl.style.display = showConsent && shouldShowInputs ? "flex" : "none";
+      consentCheckbox.required = showConsent && shouldShowInputs;
+    }
+
+    if (infoTextEl) {
+      infoTextEl.style.display = shouldShowInputs ? "" : "none";
+    }
+  }
+
   function applyThemeFromSettings() {
     if (!wheelConfig) return;
 
-    const heading = getSetting(
-      ["initialHeading", "title"],
-      wheelConfig.title || "Spin to Win!",
-    );
+    const heading = getSetting(["initialHeading", "title"], wheelConfig.title || "Spin to Win!");
     const description = getSetting(
       ["initialDescription", "description"],
       "Try your luck and win amazing prizes!",
-    );
-    const emailPlaceholder = getSetting(
-      ["initialEmailPlaceholder", "emailPlaceholder"],
-      "Enter your email",
     );
     const ctaText = getSetting(["initialCtaText", "ctaText"], "SPIN NOW");
     const infoText = getSetting(
@@ -150,7 +349,6 @@
       applyTextColor(infoTextEl);
     }
 
-    emailInput.placeholder = emailPlaceholder;
     spinBtn.textContent = ctaText;
     applyButtonStyles(spinBtn);
 
@@ -164,10 +362,7 @@
       applyButtonStyles(copyBtn);
     }
     if (continueBtn) {
-      continueBtn.textContent = getSetting(
-        ["resultContinueButtonLabel"],
-        "Continue Shopping",
-      );
+      continueBtn.textContent = getSetting(["resultContinueButtonLabel"], "Continue Shopping");
       applyButtonStyles(continueBtn);
     }
     applyTextColor(resultRewardEl);
@@ -176,9 +371,20 @@
       codeRowEl.style.borderColor = wheelSettings.buttonBackgroundColor;
     }
 
-    if (wheelSettings.backgroundColor) {
-      modal.style.background = wheelSettings.backgroundColor;
+    modal.style.backgroundColor = wheelSettings.backgroundColor || "";
+    if (wheelSettings.backgroundImageUrl) {
+      modal.style.backgroundImage = `url(${wheelSettings.backgroundImageUrl})`;
+      modal.style.backgroundSize = "cover";
+      modal.style.backgroundPosition = "center";
+      modal.style.backgroundRepeat = "no-repeat";
+    } else {
+      modal.style.backgroundImage = "none";
     }
+
+    applyFormFieldSettings();
+    applyLogoSettings();
+    applySideTriggerStyles();
+    applyCountdownStyles();
   }
 
   function drawWheel() {
@@ -213,10 +419,7 @@
       const angle = (start * Math.PI) / 180;
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
-      ctx.lineTo(
-        centerX + radius * Math.cos(angle),
-        centerY + radius * Math.sin(angle),
-      );
+      ctx.lineTo(centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle));
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -235,9 +438,7 @@
 
       const topBasedAngle = normalizeDegree(mid + 90);
       const textRotation =
-        topBasedAngle > 90 && topBasedAngle < 270
-          ? topBasedAngle + 180
-          : topBasedAngle;
+        topBasedAngle > 90 && topBasedAngle < 270 ? topBasedAngle + 180 : topBasedAngle;
 
       const lines = splitLabelIntoLines(segment.label);
       if (!lines.length) return;
@@ -293,16 +494,287 @@
     return normalized === "" || normalized === "NONE" || normalized === "NO_DISCOUNT";
   }
 
-  function resetSpinUi() {
-    isSpinning = false;
-    spinBtn.disabled = false;
-    spinBtn.textContent = getSetting(["initialCtaText", "ctaText"], "SPIN NOW");
+  function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+  }
+
+  function ensureSideTrigger() {
+    if (sideTriggerEl) return;
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "lucky-wheel-side-trigger";
+    trigger.setAttribute("aria-label", "Open lucky wheel popup");
+
+    const close = document.createElement("span");
+    close.className = "lucky-wheel-side-trigger-close";
+    close.textContent = "×";
+
+    const label = document.createElement("span");
+    label.className = "lucky-wheel-side-trigger-label";
+
+    const icon = document.createElement("span");
+    icon.className = "lucky-wheel-side-trigger-icon";
+    icon.textContent = "↗";
+
+    trigger.append(close, label, icon);
+    trigger.addEventListener("click", () => openPopup({ force: true }));
+
+    document.body.appendChild(trigger);
+
+    sideTriggerEl = trigger;
+    sideTriggerLabelEl = label;
+    sideTriggerIconEl = icon;
+  }
+
+  function applySideTriggerStyles() {
+    if (!sideTriggerEl) return;
+
+    sideTriggerEl.style.background = wheelSettings.buttonBackgroundColor || "#303030";
+    sideTriggerEl.style.color = wheelSettings.buttonTextColor || "#ffffff";
+  }
+
+  function updateSideTriggerVisibility() {
+    if (!wheelSettings.showSideTriggerButton) {
+      if (sideTriggerEl) sideTriggerEl.style.display = "none";
+      return;
+    }
+
+    ensureSideTrigger();
+    if (!sideTriggerEl || !sideTriggerLabelEl || !sideTriggerIconEl) return;
+
+    if (!isDisplayAllowed() || overlay.style.display === "flex") {
+      sideTriggerEl.style.display = "none";
+      return;
+    }
+
+    const position = getSetting(["sideTriggerPosition"], "left") === "right" ? "right" : "left";
+    sideTriggerEl.classList.toggle("lucky-wheel-side-trigger--left", position === "left");
+    sideTriggerEl.classList.toggle("lucky-wheel-side-trigger--right", position === "right");
+    sideTriggerLabelEl.textContent = getSetting(["sideTriggerButtonText"], "💫 Get Discount");
+    sideTriggerIconEl.style.display = getSetting(["sideTriggerType"], "text") === "icon_text" ? "" : "none";
+
+    applySideTriggerStyles();
+    sideTriggerEl.style.display = "flex";
+  }
+
+  function ensureCountdown() {
+    if (countdownEl) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "lucky-wheel-countdown lucky-wheel-countdown--bottom";
+
+    const time = document.createElement("span");
+    time.className = "lucky-wheel-countdown-time";
+
+    const code = document.createElement("span");
+    code.className = "lucky-wheel-countdown-code";
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "lucky-wheel-countdown-close";
+    close.textContent = "×";
+    close.setAttribute("aria-label", "Close countdown bar");
+    close.addEventListener("click", stopCountdown);
+
+    wrap.append(time, code, close);
+    document.body.appendChild(wrap);
+
+    countdownEl = wrap;
+    countdownTimeEl = time;
+    countdownCodeEl = code;
+    countdownCloseEl = close;
+  }
+
+  function applyCountdownStyles() {
+    if (!countdownEl) return;
+
+    countdownEl.style.background = wheelSettings.buttonBackgroundColor || "#303030";
+    countdownEl.style.color = wheelSettings.buttonTextColor || "#ffffff";
+
+    if (countdownCloseEl) {
+      countdownCloseEl.style.color = wheelSettings.buttonTextColor || "#ffffff";
+      countdownCloseEl.style.borderColor = wheelSettings.buttonTextColor || "#ffffff";
+    }
+  }
+
+  function stopCountdown() {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    if (countdownEl) {
+      countdownEl.style.display = "none";
+    }
+  }
+
+  function getCountdownDurationMs() {
+    const expiration = getSetting(["discountCodeExpiration"], "never");
+    if (expiration === "in_24_hours") return 24 * 60 * 60 * 1000;
+    if (expiration === "in_3_days") return 3 * 24 * 60 * 60 * 1000;
+    if (expiration === "in_7_days") return 7 * 24 * 60 * 60 * 1000;
+    return null;
+  }
+
+  function formatCountdown(ms) {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  function startCountdown(couponCode) {
+    if (!getSetting(["showCountdownAfterReveal"], false)) {
+      stopCountdown();
+      return;
+    }
+
+    ensureCountdown();
+    if (!countdownEl || !countdownTimeEl || !countdownCodeEl) return;
+
+    stopCountdown();
+    applyCountdownStyles();
+
+    countdownEl.classList.toggle(
+      "lucky-wheel-countdown--top",
+      getSetting(["countdownPosition"], "bottom_of_screen") === "top_of_screen",
+    );
+    countdownEl.classList.toggle(
+      "lucky-wheel-countdown--bottom",
+      getSetting(["countdownPosition"], "bottom_of_screen") !== "top_of_screen",
+    );
+
+    countdownCodeEl.textContent = couponCode || "CODE";
+
+    const countdownLabel = getSetting(["countdownTimerText"], "Expires in");
+    const durationMs = getCountdownDurationMs();
+
+    if (durationMs === null) {
+      countdownTimeEl.textContent = `${countdownLabel} No expiry`;
+      countdownEl.style.display = "flex";
+      return;
+    }
+
+    const target = Date.now() + durationMs;
+    const tick = () => {
+      const remaining = target - Date.now();
+      if (remaining <= 0) {
+        stopCountdown();
+        return;
+      }
+      countdownTimeEl.textContent = `${countdownLabel} ${formatCountdown(remaining)}`;
+      countdownEl.style.display = "flex";
+    };
+
+    tick();
+    countdownInterval = setInterval(tick, 1000);
+  }
+
+  function trackImpression() {
+    return fetch(`${proxyUrl}/track-impression`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wheelId: wheelConfig.id }),
+    });
   }
 
   function setInitialContentVisibility(visible) {
     const display = visible ? "" : "none";
     if (titleEl) titleEl.style.display = display;
     if (descriptionEl) descriptionEl.style.display = display;
+  }
+
+  function resetPopupView() {
+    setInitialContentVisibility(true);
+    if (form) form.style.display = "flex";
+    if (resultDiv) resultDiv.style.display = "none";
+    resetSpinUi();
+  }
+
+  function openPopup(options = {}) {
+    if (!options.force && !isDisplayAllowed()) return;
+    if (overlay.style.display === "flex") return;
+
+    resetPopupView();
+    overlay.style.display = "flex";
+    updateSideTriggerVisibility();
+
+    if (wheelConfig?.id) {
+      trackImpression().catch((error) => {
+        console.error("Failed to track impression:", error);
+      });
+    }
+  }
+
+  function closePopup() {
+    overlay.style.display = "none";
+    updateSideTriggerVisibility();
+  }
+
+  function getFormPayload() {
+    return {
+      name: String(nameInput?.value || "").trim(),
+      email: String(emailInput?.value || "").trim(),
+      phone: String(phoneInput?.value || "").trim(),
+      consentAccepted: Boolean(consentCheckbox?.checked),
+    };
+  }
+
+  function validateFormBeforeSpin() {
+    if (!isSpinAllowed(true)) return false;
+
+    const popupBehavior = getSetting(["popupBehavior"], "default");
+    if (popupBehavior === "spin_first") return true;
+
+    const disableAll = Boolean(getSetting(["disableAllFormFields"], false));
+    if (disableAll) return true;
+
+    const showName = Boolean(getSetting(["showNameField"], false));
+    const showEmail = getSetting(["showEmailField"], true) !== false;
+    const showPhone = Boolean(getSetting(["showPhoneField"], false));
+    const showConsent = Boolean(getSetting(["showConsentCheckbox"], false));
+
+    const { name, email, phone, consentAccepted } = getFormPayload();
+
+    if (showName && getSetting(["nameFieldRequirement"], "required") === "required" && !name) {
+      alert("Please enter your name");
+      return false;
+    }
+
+    if (showEmail) {
+      const emailRequired = getSetting(["emailFieldRequirement"], "required") === "required";
+      if (emailRequired && !email) {
+        alert(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
+        return false;
+      }
+      if (email && !isValidEmail(email)) {
+        alert(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
+        return false;
+      }
+    }
+
+    if (showPhone && getSetting(["phoneFieldRequirement"], "required") === "required" && !phone) {
+      alert("Please enter your phone number");
+      return false;
+    }
+
+    if (showConsent && !consentAccepted) {
+      alert("Please accept the consent checkbox");
+      return false;
+    }
+
+    return true;
+  }
+
+  function resetSpinUi() {
+    isSpinning = false;
+    spinBtn.disabled = false;
+    spinBtn.textContent = getSetting(["initialCtaText", "ctaText"], "SPIN NOW");
   }
 
   function showResult(result) {
@@ -329,6 +801,7 @@
       if (resultEmailSentEl) resultEmailSentEl.style.display = "none";
       if (resultRewardEl) resultRewardEl.style.display = "none";
       if (codeRowEl) codeRowEl.style.display = "none";
+      stopCountdown();
     } else {
       if (resultHeadingEl) {
         resultHeadingEl.textContent = getSetting(["resultHeading"], "🎁 You Won!");
@@ -357,17 +830,65 @@
       if (codeRowEl) {
         codeRowEl.style.display = couponEl && couponEl.textContent ? "flex" : "none";
       }
+
+      startCountdown(couponEl ? couponEl.textContent : "");
     }
 
     if (continueBtn) {
       continueBtn.style.display = "inline-flex";
-      continueBtn.textContent = getSetting(
-        ["resultContinueButtonLabel"],
-        "Continue Shopping",
-      );
+      continueBtn.textContent = getSetting(["resultContinueButtonLabel"], "Continue Shopping");
     }
 
     applyThemeFromSettings();
+  }
+
+  function setupPopupTriggers() {
+    if (!isDisplayAllowed()) {
+      updateSideTriggerVisibility();
+      return;
+    }
+
+    updateSideTriggerVisibility();
+
+    const triggerCondition = getSetting(["triggerCondition"], "show_immediately");
+
+    if (triggerCondition === "show_immediately") {
+      setTimeout(() => openPopup(), 150);
+      return;
+    }
+
+    if (triggerCondition === "after_delay") {
+      setTimeout(() => openPopup(), 3000);
+      return;
+    }
+
+    if (triggerCondition === "after_scroll") {
+      const onScroll = () => {
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        if (maxScroll <= 0) return;
+        const ratio = window.scrollY / maxScroll;
+        if (ratio >= 0.35) {
+          window.removeEventListener("scroll", onScroll);
+          openPopup();
+        }
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+      return;
+    }
+
+    if (triggerCondition === "on_exit_intent") {
+      const onMouseOut = (event) => {
+        if (event.relatedTarget) return;
+        if (typeof event.clientY === "number" && event.clientY <= 0) {
+          document.removeEventListener("mouseout", onMouseOut);
+          openPopup();
+        }
+      };
+      document.addEventListener("mouseout", onMouseOut);
+      return;
+    }
+
+    setTimeout(() => openPopup(), 3000);
   }
 
   async function initWheel() {
@@ -386,25 +907,17 @@
       wheelConfig = data.wheel;
       wheelSettings = parseWheelSettings(wheelConfig.config);
 
-      setInitialContentVisibility(true);
-      if (form) form.style.display = "flex";
-      if (resultDiv) resultDiv.style.display = "none";
-
+      resetPopupView();
       applyThemeFromSettings();
       drawWheel();
+      setupPopupTriggers();
 
-      setTimeout(async () => {
-        overlay.style.display = "flex";
-        try {
-          await fetch(`${proxyUrl}/track-impression`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ wheelId: wheelConfig.id }),
-          });
-        } catch (error) {
-          console.error("Failed to track impression:", error);
+      window.addEventListener("resize", () => {
+        if (Boolean(getSetting(["hideOnMobileDevices"], false)) && isMobileViewport()) {
+          closePopup();
         }
-      }, 3000);
+        updateSideTriggerVisibility();
+      });
     } catch (error) {
       console.error("Failed to load lucky wheel:", error);
     }
@@ -412,12 +925,9 @@
 
   async function handleSpin() {
     if (isSpinning || !wheelConfig) return;
+    if (!validateFormBeforeSpin()) return;
 
-    const email = String(emailInput.value || "").trim();
-    if (!email) {
-      alert("Please enter your email!");
-      return;
-    }
+    const payload = getFormPayload();
 
     isSpinning = true;
     spinBtn.disabled = true;
@@ -427,7 +937,13 @@
       const response = await fetch(`${proxyUrl}/spin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wheelId: wheelConfig.id, email }),
+        body: JSON.stringify({
+          wheelId: wheelConfig.id,
+          email: payload.email,
+          name: payload.name,
+          phone: payload.phone,
+          consentAccepted: payload.consentAccepted,
+        }),
       });
 
       const contentType = response.headers.get("content-type") || "";
@@ -450,6 +966,8 @@
       setTimeout(() => {
         showResult(result);
         isSpinning = false;
+        markSpinPerformed();
+        updateSideTriggerVisibility();
       }, 5000);
     } catch (error) {
       console.error("Spin failed:", error);
@@ -474,16 +992,18 @@
     }
   }
 
-  closeBtn.onclick = function () {
-    overlay.style.display = "none";
-  };
-
+  closeBtn.onclick = closePopup;
   spinBtn.onclick = handleSpin;
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closePopup();
+    }
+  });
+
   if (copyBtn) copyBtn.addEventListener("click", handleCopyCoupon);
   if (continueBtn) {
-    continueBtn.addEventListener("click", () => {
-      overlay.style.display = "none";
-    });
+    continueBtn.addEventListener("click", closePopup);
   }
 
   initWheel();

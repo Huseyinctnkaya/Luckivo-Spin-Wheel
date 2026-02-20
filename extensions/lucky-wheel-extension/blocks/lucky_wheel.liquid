@@ -12,6 +12,9 @@
       <div class="lucky-wheel-content">
         <div class="wheel-wrapper">
           <canvas id="wheel-canvas" width="400" height="400"></canvas>
+          <div class="lucky-wheel-center-logo" id="lucky-wheel-center-logo" style="display: none;">
+            <img id="lucky-wheel-center-logo-img" alt="Center logo">
+          </div>
           <div class="wheel-pointer" aria-hidden="true">
             <svg width="44" height="30" viewBox="0 0 44 30" fill="none">
               <path
@@ -28,11 +31,21 @@
         </div>
 
         <div class="lucky-wheel-panel">
+          <div class="lucky-wheel-top-logo" id="lucky-wheel-top-logo" style="display: none;">
+            <img id="lucky-wheel-top-logo-img" alt="Wheel logo">
+          </div>
+
           <h2 id="lucky-wheel-title">Spin to Win!</h2>
           <p id="lucky-wheel-description">Try your luck and win amazing prizes!</p>
 
           <div class="lucky-wheel-form" id="lucky-wheel-form">
+            <input type="text" id="lucky-wheel-name" placeholder="Enter your name">
             <input type="email" id="lucky-wheel-email" placeholder="Enter your email" required>
+            <input type="tel" id="lucky-wheel-phone" placeholder="Enter your phone number">
+            <label class="lucky-wheel-consent" id="lucky-wheel-consent-row">
+              <input type="checkbox" id="lucky-wheel-consent-checkbox">
+              <span>I agree to receive updates and offers from this store.</span>
+            </label>
             <button type="button" id="lucky-wheel-spin-btn">SPIN NOW</button>
             <p id="lucky-wheel-info-text">By entering, you agree to receive updates and offers from our store.</p>
           </div>
