@@ -1,7 +1,3 @@
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 function buildDiscountEmailHtml({ couponCode, reward, shopName, subject }) {
   const safeCode = String(couponCode || "").trim();
   const safeReward = String(reward || "").trim();
@@ -64,6 +60,9 @@ export async function sendDiscountEmail({ to, couponCode, reward, shopName, from
     console.warn("RESEND_API_KEY is not set. Skipping email send.");
     return null;
   }
+
+  const { Resend } = await import("resend");
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   const safeFrom = fromEmail && fromName
     ? `${fromName} <${fromEmail}>`
