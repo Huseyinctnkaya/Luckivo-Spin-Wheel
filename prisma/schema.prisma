@@ -82,12 +82,18 @@ model CustomCode {
 }
 
 model EmailSettings {
-  id        String   @id @default(uuid())
-  shop      String   @unique
-  enabled   Boolean  @default(false)
-  fromEmail String   @default("")
-  fromName  String   @default("Luckivo Spin Wheel")
-  subject   String   @default("🎁 Your discount code is here!")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(uuid())
+  shop           String   @unique
+  enabled        Boolean  @default(false)
+  fromEmail      String   @default("")
+  fromName       String   @default("Luckivo Spin Wheel")
+  subject        String   @default("🎁 Your discount code is here!")
+  headerTitle    String   @default("You Won!")
+  headerSubtitle String   @default("Congratulations on your lucky spin")
+  headerEmoji    String   @default("🎡")
+  brandColor     String   @default("#6c5ce7")
+  ctaText        String   @default("")
+  ctaUrl         String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

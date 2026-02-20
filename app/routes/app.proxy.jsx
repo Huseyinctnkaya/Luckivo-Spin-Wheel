@@ -133,6 +133,12 @@ export const action = async ({ request }) => {
                             fromEmail: emailSettings.fromEmail || undefined,
                             fromName: emailSettings.fromName || undefined,
                             subject: emailSettings.subject || undefined,
+                            headerTitle: emailSettings.headerTitle || undefined,
+                            headerSubtitle: emailSettings.headerSubtitle || undefined,
+                            headerEmoji: emailSettings.headerEmoji || undefined,
+                            brandColor: emailSettings.brandColor || undefined,
+                            ctaText: emailSettings.ctaText || undefined,
+                            ctaUrl: emailSettings.ctaUrl || undefined,
                         });
                     }
                 } catch (emailError) {
