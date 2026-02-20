@@ -182,16 +182,10 @@
     }
 
     if (!allowed && showError) {
-      const uniqueEmailEnabled = toBoolean(getSetting(["oneSpinPerEmail"], false), false);
-      const message = uniqueEmailEnabled
-        ? getSetting(
-            ["errorEmailAlreadyUsed"],
-            "This email has already spun the wheel.",
-          )
-        : getSetting(
-            ["errorFrequencyLimitExceeded", "errorOneTimeOnly", "errorTryAgainLater"],
-            "Please try again later when you are eligible.",
-          );
+      const message = getSetting(
+        ["errorFrequencyLimitExceeded", "errorOneTimeOnly", "errorTryAgainLater"],
+        "Please try again later when you are eligible.",
+      );
       setFormError(message);
     }
 
@@ -352,7 +346,6 @@
   function applyFormFieldSettings() {
     const popupBehavior = getSetting(["popupBehavior"], "default");
     const spinFirstMode = popupBehavior === "spin_first";
-    const enforceUniqueEmail = toBoolean(getSetting(["oneSpinPerEmail"], false), false);
     const disableAll = toBoolean(getSetting(["disableAllFormFields"], false), false);
 
     const showName = !disableAll && toBoolean(getSetting(["showNameField"], false), false);
@@ -360,8 +353,8 @@
     const showPhone = !disableAll && toBoolean(getSetting(["showPhoneField"], false), false);
     const showConsent = !disableAll && toBoolean(getSetting(["showConsentCheckbox"], false), false);
 
-    const shouldShowInputs = !spinFirstMode || enforceUniqueEmail;
-    const showEmail = shouldShowInputs && (enforceUniqueEmail || (!disableAll && showEmailByConfig));
+    const shouldShowInputs = !spinFirstMode;
+    const showEmail = shouldShowInputs && (!disableAll && showEmailByConfig);
 
     if (nameInput) {
       nameInput.placeholder = getSetting(["initialNamePlaceholder"], "Enter your name");
@@ -378,8 +371,7 @@
     );
     emailInput.style.display = showEmail ? "" : "none";
     emailInput.required =
-      showEmail &&
-      (enforceUniqueEmail || getSetting(["emailFieldRequirement"], "required") === "required");
+      showEmail && getSetting(["emailFieldRequirement"], "required") === "required";
 
     if (phoneInput) {
       phoneInput.placeholder = getSetting(["initialPhonePlaceholder"], "Enter your phone number");
@@ -809,19 +801,18 @@
     if (!isSpinAllowed(true)) return false;
 
     const popupBehavior = getSetting(["popupBehavior"], "default");
-    const enforceUniqueEmail = toBoolean(getSetting(["oneSpinPerEmail"], false), false);
     const spinFirstMode = popupBehavior === "spin_first";
-    if (spinFirstMode && !enforceUniqueEmail) return true;
+    if (spinFirstMode) return true;
 
     const disableAll = toBoolean(getSetting(["disableAllFormFields"], false), false);
-    if (disableAll && !enforceUniqueEmail) return true;
+    if (disableAll) return true;
 
     const showName = toBoolean(getSetting(["showNameField"], false), false);
     const showEmailByConfig = toBoolean(getSetting(["showEmailField"], true), true);
     const showPhone = toBoolean(getSetting(["showPhoneField"], false), false);
     const showConsent = toBoolean(getSetting(["showConsentCheckbox"], false), false);
-    const shouldShowInputs = !spinFirstMode || enforceUniqueEmail;
-    const showEmail = shouldShowInputs && (enforceUniqueEmail || (!disableAll && showEmailByConfig));
+    const shouldShowInputs = !spinFirstMode;
+    const showEmail = shouldShowInputs && (!disableAll && showEmailByConfig);
 
     const { name, email, phone, consentAccepted } = getFormPayload();
 
@@ -831,8 +822,7 @@
     }
 
     if (showEmail) {
-      const emailRequired =
-        enforceUniqueEmail || getSetting(["emailFieldRequirement"], "required") === "required";
+      const emailRequired = getSetting(["emailFieldRequirement"], "required") === "required";
       if (emailRequired && !email) {
         setFormError(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
         return false;

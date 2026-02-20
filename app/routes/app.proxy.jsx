@@ -77,35 +77,9 @@ export const action = async ({ request }) => {
                 wheelSettings = {};
             }
 
-            const oneSpinPerEmail = toBoolean(wheelSettings.oneSpinPerEmail, false);
             const syncToShopifyCustomers = toBoolean(wheelSettings.syncToShopifyCustomers, false);
             const rawEmail = String(email || "").trim();
             const normalizedEmail = rawEmail.toLowerCase();
-
-            if (oneSpinPerEmail) {
-                if (!normalizedEmail) {
-                    return json(
-                        { error: wheelSettings.errorEmailInvalid || "Please enter a valid email address" },
-                        { status: 400 },
-                    );
-                }
-
-                const emailCandidates = Array.from(new Set([rawEmail, normalizedEmail])).filter(Boolean);
-                const existingSpin = await db.spin.findFirst({
-                    where: {
-                        wheelId: wheel.id,
-                        OR: emailCandidates.map((value) => ({ customerEmail: value })),
-                    },
-                    select: { id: true },
-                });
-
-                if (existingSpin) {
-                    return json(
-                        { error: wheelSettings.errorEmailAlreadyUsed || "This email has already spun the wheel." },
-                        { status: 409 },
-                    );
-                }
-            }
 
             // Calculate result based on probability
             const result = calculateSpinResult(wheel.segments);

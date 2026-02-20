@@ -514,7 +514,6 @@ export default function WheelEditor() {
       "every_day",
     ),
     hideOnMobileDevices: toBoolean(parsedConfig.hideOnMobileDevices, false),
-    oneSpinPerEmail: toBoolean(parsedConfig.oneSpinPerEmail, false),
     syncToShopifyCustomers: toBoolean(parsedConfig.syncToShopifyCustomers, false),
     discountActivationTime: getValidOptionValue(
       DISCOUNT_ACTIVATION_TIME_OPTIONS,
@@ -1041,15 +1040,14 @@ export default function WheelEditor() {
   const showTopLogo =
     Boolean(config.logoImageUrl) &&
     (config.logoPosition === "top_of_popup" || config.logoPosition === "both");
-  const enforceUniqueEmail = toBoolean(config.oneSpinPerEmail, false);
   const spinFirstMode = config.popupBehavior === "spin_first";
   const disableAllFields = toBoolean(config.disableAllFormFields, false);
-  const shouldShowFormInputs = !spinFirstMode || enforceUniqueEmail;
+  const shouldShowFormInputs = !spinFirstMode;
   const showEmailByConfig = toBoolean(config.showEmailField, true);
   const showNameInput =
     shouldShowFormInputs && !disableAllFields && toBoolean(config.showNameField, false);
   const showEmailInput =
-    shouldShowFormInputs && (enforceUniqueEmail || (!disableAllFields && showEmailByConfig));
+    shouldShowFormInputs && (!disableAllFields && showEmailByConfig);
   const showPhoneInput =
     shouldShowFormInputs && !disableAllFields && toBoolean(config.showPhoneField, false);
   const showInfoText = shouldShowFormInputs;
@@ -1824,34 +1822,6 @@ export default function WheelEditor() {
               >
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
                   <BlockStack gap="300">
-                    <Banner tone={config.oneSpinPerEmail ? "success" : "warning"}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          width: "100%",
-                          gap: "12px",
-                        }}
-                      >
-                        <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
-                          <Text as="p" variant="headingSm" fontWeight="semibold">
-                            Important: One spin per email
-                          </Text>
-                          <Text as="p" tone="subdued">
-                            When enabled, the same email can spin this campaign only once.
-                          </Text>
-                        </BlockStack>
-                        <div style={{ marginLeft: "auto", flexShrink: 0 }}>
-                          <Checkbox
-                            labelHidden
-                            label="One spin per email"
-                            checked={config.oneSpinPerEmail}
-                            onChange={(checked) => handleConfigChange("oneSpinPerEmail", checked)}
-                          />
-                        </div>
-                      </div>
-                    </Banner>
-
                     <InlineStack align="space-between" blockAlign="center" gap="300">
                       <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
                         <Text as="p" variant="headingSm" fontWeight="semibold">
@@ -2092,26 +2062,19 @@ export default function WheelEditor() {
                       <Checkbox
                         labelHidden
                         label="Email Field"
-                        checked={config.oneSpinPerEmail ? true : config.showEmailField}
-                        disabled={config.disableAllFormFields || config.oneSpinPerEmail}
+                        checked={config.showEmailField}
+                        disabled={config.disableAllFormFields}
                         onChange={(checked) => handleConfigChange("showEmailField", checked)}
                       />
                     </InlineStack>
 
-                    {config.oneSpinPerEmail ? (
-                      <Text as="p" tone="subdued">
-                        Email field stays visible while one spin per email is enabled.
-                      </Text>
-                    ) : null}
-
-                    {(config.showEmailField || config.oneSpinPerEmail) && !config.disableAllFormFields ? (
+                    {config.showEmailField && !config.disableAllFormFields ? (
                       <Box background="bg-surface-secondary" padding="300" borderRadius="200">
                         <InlineGrid columns={2} gap="300">
                           <Select
                             label="Email field requirement"
                             options={EMAIL_REQUIREMENT_OPTIONS}
                             value={config.emailFieldRequirement}
-                            disabled={config.oneSpinPerEmail}
                             onChange={(value) =>
                               handleConfigChange("emailFieldRequirement", value)
                             }
