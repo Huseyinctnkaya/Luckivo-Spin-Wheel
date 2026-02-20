@@ -26,11 +26,15 @@ import db from "../db.server";
 import { useState, useCallback, useRef, useEffect } from "react";
 
 async function checkAppEmbedEnabled(admin) {
+  const EXTENSION_UID = "cf1449e6-459b-e542-07bc-86519a150ef9e95a1f96";
+  const CLIENT_ID = process.env.SHOPIFY_API_KEY || "";
+
   try {
     const response = await admin.graphql(`
       {
-        themes(first: 1, roles: MAIN) {
+        themes(first: 10, roles: [MAIN, DEVELOPMENT]) {
           nodes {
+            role
             files(filenames: ["config/settings_data.json"]) {
               nodes {
                 body {
@@ -45,21 +49,33 @@ async function checkAppEmbedEnabled(admin) {
       }
     `);
     const data = await response.json();
-    const content = data?.data?.themes?.nodes?.[0]?.files?.nodes?.[0]?.body?.content;
-    if (!content) return false;
-    const settings = JSON.parse(content);
-    const blocks = settings?.current?.blocks || {};
-    for (const block of Object.values(blocks)) {
-      if (
-        typeof block.type === "string" &&
-        block.type.includes("cf1449e6-459b-e542-07bc-86519a150ef9e95a1f96") &&
-        block.disabled !== true
-      ) {
-        return true;
+    const themes = data?.data?.themes?.nodes || [];
+
+    for (const theme of themes) {
+      const content = theme?.files?.nodes?.[0]?.body?.content;
+      if (!content) continue;
+
+      let settings;
+      try {
+        settings = JSON.parse(content);
+      } catch {
+        continue;
+      }
+
+      const blocks = settings?.current?.blocks || {};
+      for (const block of Object.values(blocks)) {
+        if (typeof block.type !== "string") continue;
+        const isOurExtension =
+          block.type.includes(EXTENSION_UID) ||
+          (CLIENT_ID && block.type.includes(CLIENT_ID));
+        if (isOurExtension && block.disabled !== true) {
+          return true;
+        }
       }
     }
     return false;
-  } catch {
+  } catch (err) {
+    console.error("[checkAppEmbedEnabled] Error:", err);
     return false;
   }
 }
