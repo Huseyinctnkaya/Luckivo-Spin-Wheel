@@ -137,7 +137,7 @@
   margin-top: 6px !important;
 }
 
-.wheel-wrapper {
+.lucky-wheel-wheel-wrapper {
   position: relative;
   margin: 8px auto 0;
   width: min(76vw, 320px);
@@ -151,7 +151,7 @@
   transition: transform 5s cubic-bezier(0.15, 0, 0.15, 1);
 }
 
-.wheel-pointer {
+.lucky-wheel-pointer {
   position: absolute;
   top: 50%;
   right: -28px;
@@ -165,7 +165,7 @@
   z-index: 12;
 }
 
-.wheel-pointer svg {
+.lucky-wheel-pointer svg {
   display: block;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
 }
@@ -438,7 +438,7 @@
     min-height: 420px;
   }
 
-  .wheel-wrapper {
+  .lucky-wheel-wheel-wrapper {
     margin: 0 auto;
     width: 330px;
     height: 330px;
@@ -446,7 +446,7 @@
     max-height: 100%;
   }
 
-  .wheel-pointer {
+  .lucky-wheel-pointer {
     right: -31px;
     width: 44px;
     height: 30px;
