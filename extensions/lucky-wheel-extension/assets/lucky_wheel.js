@@ -76,6 +76,17 @@
     return fallback;
   }
 
+  function toBoolean(value, fallback = false) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (["true", "1", "yes", "on"].includes(normalized)) return true;
+      if (["false", "0", "no", "off", ""].includes(normalized)) return false;
+    }
+    return fallback;
+  }
+
   function getSegments() {
     return Array.isArray(wheelConfig?.segments) ? wheelConfig.segments : [];
   }
@@ -171,7 +182,7 @@
     }
 
     if (!allowed && showError) {
-      const uniqueEmailEnabled = Boolean(getSetting(["oneSpinPerEmail"], true));
+      const uniqueEmailEnabled = toBoolean(getSetting(["oneSpinPerEmail"], false), false);
       const message = uniqueEmailEnabled
         ? getSetting(
             ["errorEmailAlreadyUsed"],
@@ -194,7 +205,7 @@
   }
 
   function isDisplayAllowed() {
-    if (Boolean(getSetting(["hideOnMobileDevices"], false)) && isMobileViewport()) {
+    if (toBoolean(getSetting(["hideOnMobileDevices"], false), false) && isMobileViewport()) {
       return false;
     }
     if (!isDisplayPageAllowed() || !isDisplayDayAllowed()) {
@@ -297,13 +308,13 @@
   function applyFormFieldSettings() {
     const popupBehavior = getSetting(["popupBehavior"], "default");
     const spinFirstMode = popupBehavior === "spin_first";
-    const enforceUniqueEmail = Boolean(getSetting(["oneSpinPerEmail"], true));
-    const disableAll = Boolean(getSetting(["disableAllFormFields"], false));
+    const enforceUniqueEmail = toBoolean(getSetting(["oneSpinPerEmail"], false), false);
+    const disableAll = toBoolean(getSetting(["disableAllFormFields"], false), false);
 
-    const showName = !disableAll && Boolean(getSetting(["showNameField"], false));
-    const showEmailByConfig = getSetting(["showEmailField"], true) !== false;
-    const showPhone = !disableAll && Boolean(getSetting(["showPhoneField"], false));
-    const showConsent = !disableAll && Boolean(getSetting(["showConsentCheckbox"], false));
+    const showName = !disableAll && toBoolean(getSetting(["showNameField"], false), false);
+    const showEmailByConfig = toBoolean(getSetting(["showEmailField"], true), true);
+    const showPhone = !disableAll && toBoolean(getSetting(["showPhoneField"], false), false);
+    const showConsent = !disableAll && toBoolean(getSetting(["showConsentCheckbox"], false), false);
 
     const shouldShowInputs = !spinFirstMode || enforceUniqueEmail;
     const showEmail = shouldShowInputs && (enforceUniqueEmail || (!disableAll && showEmailByConfig));
@@ -558,7 +569,7 @@
   }
 
   function updateSideTriggerVisibility() {
-    if (!wheelSettings.showSideTriggerButton) {
+    if (!toBoolean(wheelSettings.showSideTriggerButton, false)) {
       if (sideTriggerEl) sideTriggerEl.style.display = "none";
       return;
     }
@@ -652,7 +663,7 @@
   }
 
   function startCountdown(couponCode) {
-    if (!getSetting(["showCountdownAfterReveal"], false)) {
+    if (!toBoolean(getSetting(["showCountdownAfterReveal"], false), false)) {
       stopCountdown();
       return;
     }
@@ -753,17 +764,17 @@
     if (!isSpinAllowed(true)) return false;
 
     const popupBehavior = getSetting(["popupBehavior"], "default");
-    const enforceUniqueEmail = Boolean(getSetting(["oneSpinPerEmail"], true));
+    const enforceUniqueEmail = toBoolean(getSetting(["oneSpinPerEmail"], false), false);
     const spinFirstMode = popupBehavior === "spin_first";
     if (spinFirstMode && !enforceUniqueEmail) return true;
 
-    const disableAll = Boolean(getSetting(["disableAllFormFields"], false));
+    const disableAll = toBoolean(getSetting(["disableAllFormFields"], false), false);
     if (disableAll && !enforceUniqueEmail) return true;
 
-    const showName = Boolean(getSetting(["showNameField"], false));
-    const showEmailByConfig = getSetting(["showEmailField"], true) !== false;
-    const showPhone = Boolean(getSetting(["showPhoneField"], false));
-    const showConsent = Boolean(getSetting(["showConsentCheckbox"], false));
+    const showName = toBoolean(getSetting(["showNameField"], false), false);
+    const showEmailByConfig = toBoolean(getSetting(["showEmailField"], true), true);
+    const showPhone = toBoolean(getSetting(["showPhoneField"], false), false);
+    const showConsent = toBoolean(getSetting(["showConsentCheckbox"], false), false);
     const shouldShowInputs = !spinFirstMode || enforceUniqueEmail;
     const showEmail = shouldShowInputs && (enforceUniqueEmail || (!disableAll && showEmailByConfig));
 
@@ -950,7 +961,7 @@
       setupPopupTriggers();
 
       window.addEventListener("resize", () => {
-        if (Boolean(getSetting(["hideOnMobileDevices"], false)) && isMobileViewport()) {
+        if (toBoolean(getSetting(["hideOnMobileDevices"], false), false) && isMobileViewport()) {
           closePopup();
         }
         updateSideTriggerVisibility();

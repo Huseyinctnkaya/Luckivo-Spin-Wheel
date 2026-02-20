@@ -2,6 +2,17 @@ import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
+function toBoolean(value, fallback = false) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (["true", "1", "yes", "on"].includes(normalized)) return true;
+        if (["false", "0", "no", "off", ""].includes(normalized)) return false;
+    }
+    return fallback;
+}
+
 export const loader = async ({ request }) => {
     try {
         const noStoreHeaders = {
@@ -66,7 +77,7 @@ export const action = async ({ request }) => {
                 wheelSettings = {};
             }
 
-            const oneSpinPerEmail = wheelSettings.oneSpinPerEmail !== false;
+            const oneSpinPerEmail = toBoolean(wheelSettings.oneSpinPerEmail, false);
             const rawEmail = String(email || "").trim();
             const normalizedEmail = rawEmail.toLowerCase();
 

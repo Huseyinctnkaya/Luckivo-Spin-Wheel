@@ -152,6 +152,17 @@ function getValidOptionValue(options, value, fallback) {
   return options.some((option) => option.value === value) ? value : fallback;
 }
 
+function toBoolean(value, fallback = false) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "off", ""].includes(normalized)) return false;
+  }
+  return fallback;
+}
+
 function normalizeHex(input, fallback) {
   if (typeof input !== "string") return fallback;
   const value = input.trim().replace(/^#/, "");
@@ -502,8 +513,8 @@ export default function WheelEditor() {
       parsedConfig.displayOnDays,
       "every_day",
     ),
-    hideOnMobileDevices: Boolean(parsedConfig.hideOnMobileDevices),
-    oneSpinPerEmail: parsedConfig.oneSpinPerEmail !== false,
+    hideOnMobileDevices: toBoolean(parsedConfig.hideOnMobileDevices, false),
+    oneSpinPerEmail: toBoolean(parsedConfig.oneSpinPerEmail, false),
     discountActivationTime: getValidOptionValue(
       DISCOUNT_ACTIVATION_TIME_OPTIONS,
       parsedConfig.discountActivationTime,
@@ -519,7 +530,7 @@ export default function WheelEditor() {
       parsedConfig.spinFrequency,
       "one_time_only",
     ),
-    showSideTriggerButton: Boolean(parsedConfig.showSideTriggerButton),
+    showSideTriggerButton: toBoolean(parsedConfig.showSideTriggerButton, false),
     sideTriggerType: getValidOptionValue(
       SIDE_TRIGGER_TYPE_OPTIONS,
       parsedConfig.sideTriggerType,
@@ -532,7 +543,7 @@ export default function WheelEditor() {
     ),
     sideTriggerButtonText: parsedConfig.sideTriggerButtonText || "💫 Get Discount",
     currencySymbol: parsedConfig.currencySymbol || "$",
-    showCountdownAfterReveal: Boolean(parsedConfig.showCountdownAfterReveal),
+    showCountdownAfterReveal: toBoolean(parsedConfig.showCountdownAfterReveal, false),
     countdownTimerText: parsedConfig.countdownTimerText || "Expires in",
     countdownPosition: getValidOptionValue(
       COUNTDOWN_POSITION_OPTIONS,
@@ -612,26 +623,29 @@ export default function WheelEditor() {
       parsedConfig.logoPosition,
       "center_of_wheel",
     ),
-    disableAllFormFields: Boolean(parsedConfig.disableAllFormFields),
-    showNameField: Boolean(parsedConfig.showNameField),
+    disableAllFormFields: toBoolean(parsedConfig.disableAllFormFields, false),
+    showNameField: toBoolean(parsedConfig.showNameField, false),
     nameFieldRequirement: getValidOptionValue(
       EMAIL_REQUIREMENT_OPTIONS,
       parsedConfig.nameFieldRequirement,
       "required",
     ),
-    showEmailField: parsedConfig.showEmailField !== false,
+    showEmailField:
+      parsedConfig.showEmailField === undefined
+        ? true
+        : toBoolean(parsedConfig.showEmailField, true),
     emailFieldRequirement: getValidOptionValue(
       EMAIL_REQUIREMENT_OPTIONS,
       parsedConfig.emailFieldRequirement,
       "required",
     ),
-    showPhoneField: Boolean(parsedConfig.showPhoneField),
+    showPhoneField: toBoolean(parsedConfig.showPhoneField, false),
     phoneFieldRequirement: getValidOptionValue(
       EMAIL_REQUIREMENT_OPTIONS,
       parsedConfig.phoneFieldRequirement,
       "required",
     ),
-    showConsentCheckbox: Boolean(parsedConfig.showConsentCheckbox),
+    showConsentCheckbox: toBoolean(parsedConfig.showConsentCheckbox, false),
   });
   const [editingDiscountIndex, setEditingDiscountIndex] = useState(null);
   const [discountDraft, setDiscountDraft] = useState(null);
@@ -1026,6 +1040,18 @@ export default function WheelEditor() {
   const showTopLogo =
     Boolean(config.logoImageUrl) &&
     (config.logoPosition === "top_of_popup" || config.logoPosition === "both");
+  const enforceUniqueEmail = toBoolean(config.oneSpinPerEmail, false);
+  const spinFirstMode = config.popupBehavior === "spin_first";
+  const disableAllFields = toBoolean(config.disableAllFormFields, false);
+  const shouldShowFormInputs = !spinFirstMode || enforceUniqueEmail;
+  const showEmailByConfig = toBoolean(config.showEmailField, true);
+  const showNameInput =
+    shouldShowFormInputs && !disableAllFields && toBoolean(config.showNameField, false);
+  const showEmailInput =
+    shouldShowFormInputs && (enforceUniqueEmail || (!disableAllFields && showEmailByConfig));
+  const showPhoneInput =
+    shouldShowFormInputs && !disableAllFields && toBoolean(config.showPhoneField, false);
+  const showInfoText = shouldShowFormInputs;
   const previewResultSegment = segments[0] || null;
   const previewResultCode = buildPreviewRewardCode(previewResultSegment);
   const previewSideButtonText = config.sideTriggerButtonText || "💫 Get Discount";
@@ -1247,7 +1273,7 @@ export default function WheelEditor() {
       </div>
 
       <div style={{ marginTop: "14px" }}>
-        {!config.disableAllFormFields && config.showNameField ? (
+        {showNameInput ? (
           <input
             readOnly
             value={config.initialNamePlaceholder}
@@ -1263,7 +1289,7 @@ export default function WheelEditor() {
             }}
           />
         ) : null}
-        {!config.disableAllFormFields && config.showEmailField ? (
+        {showEmailInput ? (
           <input
             readOnly
             value={config.initialEmailPlaceholder}
@@ -1279,7 +1305,7 @@ export default function WheelEditor() {
             }}
           />
         ) : null}
-        {!config.disableAllFormFields && config.showPhoneField ? (
+        {showPhoneInput ? (
           <input
             readOnly
             value={config.initialPhonePlaceholder}
@@ -1310,13 +1336,15 @@ export default function WheelEditor() {
         >
           {config.initialCtaText}
         </button>
-        <div style={{ marginTop: "10px", textAlign: "left" }}>
-          <Text as="p" tone="subdued">
-            <span style={{ color: config.textColor }}>
-              {config.initialInfoText}
-            </span>
-          </Text>
-        </div>
+        {showInfoText ? (
+          <div style={{ marginTop: "10px", textAlign: "left" }}>
+            <Text as="p" tone="subdued">
+              <span style={{ color: config.textColor }}>
+                {config.initialInfoText}
+              </span>
+            </Text>
+          </div>
+        ) : null}
       </div>
     </>
   );
@@ -2045,19 +2073,26 @@ export default function WheelEditor() {
                       <Checkbox
                         labelHidden
                         label="Email Field"
-                        checked={config.showEmailField}
-                        disabled={config.disableAllFormFields}
+                        checked={config.oneSpinPerEmail ? true : config.showEmailField}
+                        disabled={config.disableAllFormFields || config.oneSpinPerEmail}
                         onChange={(checked) => handleConfigChange("showEmailField", checked)}
                       />
                     </InlineStack>
 
-                    {config.showEmailField && !config.disableAllFormFields ? (
+                    {config.oneSpinPerEmail ? (
+                      <Text as="p" tone="subdued">
+                        Email field stays visible while one spin per email is enabled.
+                      </Text>
+                    ) : null}
+
+                    {(config.showEmailField || config.oneSpinPerEmail) && !config.disableAllFormFields ? (
                       <Box background="bg-surface-secondary" padding="300" borderRadius="200">
                         <InlineGrid columns={2} gap="300">
                           <Select
                             label="Email field requirement"
                             options={EMAIL_REQUIREMENT_OPTIONS}
                             value={config.emailFieldRequirement}
+                            disabled={config.oneSpinPerEmail}
                             onChange={(value) =>
                               handleConfigChange("emailFieldRequirement", value)
                             }
