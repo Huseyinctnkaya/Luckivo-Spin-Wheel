@@ -318,6 +318,7 @@ export default function SubscribersPage() {
             )}
           </BlockStack>
         </Card>
+        <Box paddingBlockEnd="800" />
       </BlockStack>
     </Page>
   );

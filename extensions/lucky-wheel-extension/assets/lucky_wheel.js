@@ -268,12 +268,17 @@
 
   function enforcePopupSpacing() {
     const isDesktop = window.matchMedia("(min-width: 768px)").matches;
-    setImportantStyle(titleEl, "display", "block");
+    const isResultVisible = resultDiv && resultDiv.style.display !== "none";
+    if (!isResultVisible) {
+      setImportantStyle(titleEl, "display", "block");
+    }
     setImportantStyle(titleEl, "margin", "0");
     setImportantStyle(titleEl, "margin-top", isDesktop ? "0" : "14px");
     setImportantStyle(titleEl, "padding", "0");
     setImportantStyle(titleEl, "min-height", "0");
-    setImportantStyle(descriptionEl, "display", "block");
+    if (!isResultVisible) {
+      setImportantStyle(descriptionEl, "display", "block");
+    }
     setImportantStyle(descriptionEl, "margin", "0");
     setImportantStyle(descriptionEl, "margin-top", "6px");
     setImportantStyle(descriptionEl, "padding", "0");
