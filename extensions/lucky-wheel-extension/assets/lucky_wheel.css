@@ -98,8 +98,14 @@
   padding: 6px;
 }
 
+.lucky-wheel-panel h2,
+.lucky-wheel-panel h3,
+.lucky-wheel-panel p {
+  margin: 0 !important;
+}
+
 #lucky-wheel-title {
-  margin: 14px 0 0;
+  margin: 14px 0 0 !important;
   font-size: 22px !important;
   line-height: 1.25 !important;
   font-weight: 700 !important;
@@ -108,7 +114,7 @@
 }
 
 #lucky-wheel-result-heading {
-  margin: 0;
+  margin: 0 !important;
   font-size: 22px !important;
   line-height: 1.25 !important;
   font-weight: 700 !important;
@@ -121,14 +127,14 @@
 #lucky-wheel-result-description,
 #lucky-wheel-result-email-sent,
 #lucky-wheel-result-reward {
-  margin: 0;
+  margin: 0 !important;
   font-size: 16px !important;
   line-height: 1.35 !important;
   text-align: left;
 }
 
 #lucky-wheel-description {
-  margin-top: 6px;
+  margin-top: 6px !important;
 }
 
 .wheel-wrapper {
@@ -251,23 +257,23 @@
 }
 
 #lucky-wheel-result-heading {
-  margin-top: 2px;
+  margin-top: 2px !important;
 }
 
 #lucky-wheel-result-description {
-  margin-top: 6px;
+  margin-top: 6px !important;
 }
 
 #lucky-wheel-result-email-sent {
-  margin-top: 4px;
+  margin-top: 4px !important;
 }
 
 #lucky-wheel-result-reward {
-  margin-top: 6px;
+  margin-top: 6px !important;
 }
 
 #lucky-wheel-info-text {
-  margin-top: 10px;
+  margin-top: 10px !important;
 }
 
 .lucky-wheel-code-row {
@@ -452,7 +458,7 @@
   }
 
   #lucky-wheel-title {
-    margin-top: 0;
+    margin-top: 0 !important;
   }
 
   .lucky-wheel-form,
