@@ -238,31 +238,31 @@
 
 @media (min-width: 768px) {
   .lucky-wheel-modal {
-    max-width: 980px;
-    width: min(96vw, 980px);
+    max-width: 860px;
+    width: min(96vw, 860px);
     padding: 30px 30px 26px;
     text-align: left;
   }
 
   .lucky-wheel-content {
     display: grid;
-    grid-template-columns: minmax(320px, 46%) minmax(340px, 54%);
+    grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "wheel title"
       "wheel description"
       "wheel content";
     align-items: center;
-    column-gap: 28px;
+    column-gap: 24px;
     row-gap: 12px;
   }
 
   .wheel-wrapper {
     grid-area: wheel;
     margin: 0;
-    width: min(35vw, 360px);
-    height: min(35vw, 360px);
-    max-width: 360px;
-    max-height: 360px;
+    width: min(38vw, 380px);
+    height: min(38vw, 380px);
+    max-width: 380px;
+    max-height: 380px;
   }
 
   #lucky-wheel-title {

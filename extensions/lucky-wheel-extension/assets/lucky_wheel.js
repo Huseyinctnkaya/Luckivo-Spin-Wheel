@@ -189,9 +189,12 @@
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const radius = canvas.width / 2 - 8;
-    const labelRadius = radius * 0.67;
+    const labelRadius = radius * 0.62;
     const segmentTextColors = wheelSettings.segmentTextColors || {};
     const wheelTextColor = wheelSettings.wheelTextColor || DEFAULT_WHEEL_TEXT_COLOR;
+
+    const segmentCount = slices.length;
+    const baseFontSize = segmentCount <= 4 ? 18 : segmentCount <= 6 ? 15 : segmentCount <= 8 ? 13 : 11;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -239,15 +242,18 @@
       const lines = splitLabelIntoLines(segment.label);
       if (!lines.length) return;
 
+      const maxLabelLen = Math.max(...lines.map((l) => l.length));
+      const fontSize = maxLabelLen > 10 ? Math.max(baseFontSize - 2, 10) : baseFontSize;
+
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate((textRotation * Math.PI) / 180);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = segmentTextColors[segment.id] || wheelTextColor;
-      ctx.font = "700 18px sans-serif";
+      ctx.font = `700 ${fontSize}px sans-serif`;
 
-      const lineGap = 18;
+      const lineGap = fontSize + 2;
       const startY = lines.length > 1 ? -lineGap / 2 : 0;
       lines.forEach((line, index) => {
         ctx.fillText(line, 0, startY + index * lineGap);
