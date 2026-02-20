@@ -15,6 +15,7 @@
   const phoneInput = document.getElementById("lucky-wheel-phone");
   const consentRowEl = document.getElementById("lucky-wheel-consent-row");
   const consentCheckbox = document.getElementById("lucky-wheel-consent-checkbox");
+  const formErrorEl = document.getElementById("lucky-wheel-error");
   const form = document.getElementById("lucky-wheel-form");
   const resultDiv = document.getElementById("lucky-wheel-result");
   const resultHeadingEl = document.getElementById("lucky-wheel-result-heading");
@@ -170,12 +171,17 @@
     }
 
     if (!allowed && showError) {
-      alert(
-        getSetting(
-          ["errorFrequencyLimitExceeded", "errorOneTimeOnly", "errorTryAgainLater"],
-          "Please try again later when you are eligible.",
-        ),
-      );
+      const uniqueEmailEnabled = Boolean(getSetting(["oneSpinPerEmail"], true));
+      const message = uniqueEmailEnabled
+        ? getSetting(
+            ["errorEmailAlreadyUsed"],
+            "This email has already spun the wheel.",
+          )
+        : getSetting(
+            ["errorFrequencyLimitExceeded", "errorOneTimeOnly", "errorTryAgainLater"],
+            "Please try again later when you are eligible.",
+          );
+      setFormError(message);
     }
 
     return allowed;
@@ -248,6 +254,22 @@
     if (wheelSettings.textColor) {
       element.style.color = wheelSettings.textColor;
     }
+  }
+
+  function setFormError(message) {
+    if (!formErrorEl) return;
+    const safeMessage = String(message || "").trim();
+    if (!safeMessage) {
+      formErrorEl.style.display = "none";
+      formErrorEl.textContent = "";
+      return;
+    }
+    formErrorEl.textContent = safeMessage;
+    formErrorEl.style.display = "block";
+  }
+
+  function clearFormError() {
+    setFormError("");
   }
 
   function applyLogoSettings() {
@@ -694,6 +716,7 @@
     setInitialContentVisibility(true);
     if (form) form.style.display = "flex";
     if (resultDiv) resultDiv.style.display = "none";
+    clearFormError();
     resetSpinUi();
   }
 
@@ -747,7 +770,7 @@
     const { name, email, phone, consentAccepted } = getFormPayload();
 
     if (!disableAll && showName && getSetting(["nameFieldRequirement"], "required") === "required" && !name) {
-      alert("Please enter your name");
+      setFormError("Please enter your name");
       return false;
     }
 
@@ -755,11 +778,11 @@
       const emailRequired =
         enforceUniqueEmail || getSetting(["emailFieldRequirement"], "required") === "required";
       if (emailRequired && !email) {
-        alert(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
+        setFormError(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
         return false;
       }
       if (email && !isValidEmail(email)) {
-        alert(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
+        setFormError(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
         return false;
       }
     }
@@ -771,15 +794,16 @@
       getSetting(["phoneFieldRequirement"], "required") === "required" &&
       !phone
     ) {
-      alert("Please enter your phone number");
+      setFormError("Please enter your phone number");
       return false;
     }
 
     if (!disableAll && showConsent && shouldShowInputs && !consentAccepted) {
-      alert("Please accept the consent checkbox");
+      setFormError("Please accept the consent checkbox");
       return false;
     }
 
+    clearFormError();
     return true;
   }
 
@@ -940,6 +964,7 @@
     if (!validateFormBeforeSpin()) return;
 
     const payload = getFormPayload();
+    clearFormError();
 
     isSpinning = true;
     spinBtn.disabled = true;
@@ -966,7 +991,7 @@
 
       const result = await response.json();
       if (result.error) {
-        alert(result.error);
+        setFormError(result.error);
         resetSpinUi();
         return;
       }
@@ -983,6 +1008,7 @@
       }, 5000);
     } catch (error) {
       console.error("Spin failed:", error);
+      setFormError(getSetting(["errorTryAgainLater"], "Please try again later when you are eligible."));
       resetSpinUi();
     }
   }

@@ -82,7 +82,7 @@ export const action = async ({ request }) => {
 
                 if (existingSpin) {
                     return json(
-                        { error: wheelSettings.errorEmailAlreadyUsed || "This email has already been used" },
+                        { error: wheelSettings.errorEmailAlreadyUsed || "This email has already spun the wheel." },
                         { status: 409 },
                     );
                 }
