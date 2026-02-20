@@ -311,9 +311,9 @@ export default function Index() {
         <InlineStack gap="400" align="start" wrap={false}>
           {[
             {
-              title: "Campaigns",
-              description: "Create, manage or schedule your campaigns.",
-              button: "View campaigns",
+              title: "Wheels",
+              description: "Create, manage or schedule your wheels.",
+              button: "View wheels",
               url: "/app/wheels",
             },
             {
