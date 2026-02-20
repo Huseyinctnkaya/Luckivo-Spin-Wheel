@@ -585,6 +585,10 @@
     const close = document.createElement("span");
     close.className = "lucky-wheel-side-trigger-close";
     close.textContent = "×";
+    close.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (sideTriggerEl) sideTriggerEl.style.display = "none";
+    });
 
     const label = document.createElement("span");
     label.className = "lucky-wheel-side-trigger-label";

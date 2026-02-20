@@ -235,7 +235,6 @@ export default function WheelsPage() {
   const submit = useSubmit();
   const navigate = useNavigate();
   const matches = useMatches();
-  const [filter, setFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
 
   const childRouteActive = matches.some(
@@ -252,11 +251,6 @@ export default function WheelsPage() {
     submit({ intent: "createFromTemplate", templateId }, { method: "post" });
   };
 
-  const filtered =
-    filter === "active"
-      ? wheels.filter((w) => w.isActive)
-      : wheels;
-
   if (childRouteActive) {
     return <Outlet />;
   }
@@ -272,75 +266,29 @@ export default function WheelsPage() {
     >
       <Card padding="0">
         <Box padding="400" paddingBlockEnd="0">
-          <InlineStack align="space-between" blockAlign="center">
-            <Text variant="headingMd" as="h2" fontWeight="bold">
-              Your wheels
-            </Text>
-            <div
-              style={{
-                display: "flex",
-                border: "1px solid #e3e3e3",
-                borderRadius: "8px",
-                overflow: "hidden",
-              }}
-            >
-              <button
-                onClick={() => setFilter("all")}
-                style={{
-                  padding: "6px 14px",
-                  border: "none",
-                  background: filter === "all" ? "#f6f6f7" : "transparent",
-                  fontWeight: filter === "all" ? 600 : 400,
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  borderRight: "1px solid #e3e3e3",
-                }}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilter("active")}
-                style={{
-                  padding: "6px 14px",
-                  border: "none",
-                  background: filter === "active" ? "#f6f6f7" : "transparent",
-                  fontWeight: filter === "active" ? 600 : 400,
-                  cursor: "pointer",
-                  fontSize: "13px",
-                }}
-              >
-                Active/Scheduled
-              </button>
-            </div>
-          </InlineStack>
+          <Text variant="headingMd" as="h2" fontWeight="bold">
+            Your wheels
+          </Text>
         </Box>
 
-        {filtered.length === 0 ? (
+        {wheels.length === 0 ? (
           <Box padding="400">
             <EmptyState
-              heading={
-                filter === "active"
-                  ? "No active wheels"
-                  : "Create your first wheel"
-              }
+              heading="Create your first wheel"
               action={{
                 content: "Create Wheel",
                 onAction: openModal,
               }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
-              <p>
-                {filter === "active"
-                  ? "Activate a wheel to start collecting emails and rewards."
-                  : "Create your first wheel to start collecting emails and rewards."}
-              </p>
+              <p>Create your first wheel to start collecting emails and rewards.</p>
             </EmptyState>
           </Box>
         ) : (
           <Box paddingBlockStart="400">
             <IndexTable
               resourceName={{ singular: "wheel", plural: "wheels" }}
-              itemCount={filtered.length}
+              itemCount={wheels.length}
               headings={[
                 { title: "Name" },
                 { title: "Status" },
@@ -348,7 +296,7 @@ export default function WheelsPage() {
               ]}
               selectable={false}
             >
-              {filtered.map((wheel, index) => (
+              {wheels.map((wheel, index) => (
                 <IndexTable.Row id={wheel.id} key={wheel.id} position={index}>
                   <IndexTable.Cell>
                     <Text variant="bodyMd" fontWeight="bold" as="span">
