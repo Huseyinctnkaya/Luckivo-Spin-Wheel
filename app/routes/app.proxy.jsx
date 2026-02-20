@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import { authenticate, unauthenticated } from "../shopify.server";
 import db from "../db.server";
+import { sendDiscountEmail } from "../email.server";
 
 function toBoolean(value, fallback = false) {
     if (typeof value === "boolean") return value;
@@ -94,11 +95,11 @@ export const action = async ({ request }) => {
                 }
             });
 
-            if (syncToShopifyCustomers && normalizedEmail) {
-                const rawName = String(body?.name || "").trim();
-                const rawPhone = String(body?.phone || "").trim();
-                const consentAccepted = toBoolean(body?.consentAccepted, false);
+            const rawName = String(body?.name || "").trim();
+            const rawPhone = String(body?.phone || "").trim();
+            const consentAccepted = toBoolean(body?.consentAccepted, false);
 
+            if (syncToShopifyCustomers && normalizedEmail) {
                 try {
                     await syncSpinCustomerToShopify({
                         shop: session.shop,
@@ -109,6 +110,33 @@ export const action = async ({ request }) => {
                     });
                 } catch (syncError) {
                     console.error("Customer sync failed:", syncError);
+                }
+            }
+
+            const isNoReward = !result.value ||
+                result.value.trim().toUpperCase() === "NONE" ||
+                result.value.trim().toUpperCase() === "NO_DISCOUNT" ||
+                /try\s*again|no\s*luck/i.test(result.label || "");
+
+            if (normalizedEmail && !isNoReward) {
+                try {
+                    const emailSettings = await db.emailSettings.findUnique({
+                        where: { shop: session.shop },
+                    });
+
+                    if (emailSettings?.enabled) {
+                        await sendDiscountEmail({
+                            to: normalizedEmail,
+                            couponCode: result.value,
+                            reward: result.label,
+                            shopName: session.shop.replace(".myshopify.com", ""),
+                            fromEmail: emailSettings.fromEmail || undefined,
+                            fromName: emailSettings.fromName || undefined,
+                            subject: emailSettings.subject || undefined,
+                        });
+                    }
+                } catch (emailError) {
+                    console.error("Email send failed:", emailError);
                 }
             }
 

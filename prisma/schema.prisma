@@ -80,3 +80,14 @@ model CustomCode {
   shop String @unique
   code String @default("")
 }
+
+model EmailSettings {
+  id        String   @id @default(uuid())
+  shop      String   @unique
+  enabled   Boolean  @default(false)
+  fromEmail String   @default("")
+  fromName  String   @default("Luckivo Spin Wheel")
+  subject   String   @default("🎁 Your discount code is here!")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
