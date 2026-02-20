@@ -28,6 +28,7 @@ export default function App() {
         </Link>
         <Link to="/app/wheels">Wheels</Link>
         <Link to="/app/subscribers">Subscribers</Link>
+        <Link to="/app/email-settings">Email</Link>
         <Link to="/app/analytics">Analytics</Link>
         <Link to="/app/plans">Plans</Link>
       </NavMenu>
