@@ -432,7 +432,7 @@ export const action = async ({ request, params }) => {
       return json(
         {
           success: false,
-          error: `Başka bir çark zaten aktif (${activeConflict.title}). Lütfen önce onu kapatın.`,
+          error: `Another wheel is already active (${activeConflict.title}). Please deactivate it first.`,
         },
         { status: 409 },
       );
@@ -514,7 +514,7 @@ export default function WheelEditor() {
       "every_day",
     ),
     hideOnMobileDevices: toBoolean(parsedConfig.hideOnMobileDevices, false),
-    syncToShopifyCustomers: toBoolean(parsedConfig.syncToShopifyCustomers, false),
+    syncToShopifyCustomers: toBoolean(parsedConfig.syncToShopifyCustomers, true),
     discountActivationTime: getValidOptionValue(
       DISCOUNT_ACTIVATION_TIME_OPTIONS,
       parsedConfig.discountActivationTime,
