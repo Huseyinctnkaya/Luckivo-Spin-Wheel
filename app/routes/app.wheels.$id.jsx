@@ -1796,8 +1796,15 @@ export default function WheelEditor() {
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
                   <BlockStack gap="300">
                     <Banner tone={config.oneSpinPerEmail ? "success" : "warning"}>
-                      <InlineStack align="space-between" blockAlign="center" wrap={false}>
-                        <BlockStack gap="100">
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          width: "100%",
+                          gap: "12px",
+                        }}
+                      >
+                        <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
                           <Text as="p" variant="headingSm" fontWeight="semibold">
                             Important: One spin per email
                           </Text>
@@ -1805,13 +1812,15 @@ export default function WheelEditor() {
                             When enabled, the same email can spin this campaign only once.
                           </Text>
                         </BlockStack>
-                        <Checkbox
-                          labelHidden
-                          label="One spin per email"
-                          checked={config.oneSpinPerEmail}
-                          onChange={(checked) => handleConfigChange("oneSpinPerEmail", checked)}
-                        />
-                      </InlineStack>
+                        <div style={{ marginLeft: "auto", flexShrink: 0 }}>
+                          <Checkbox
+                            labelHidden
+                            label="One spin per email"
+                            checked={config.oneSpinPerEmail}
+                            onChange={(checked) => handleConfigChange("oneSpinPerEmail", checked)}
+                          />
+                        </div>
+                      </div>
                     </Banner>
                     <Select
                       label="Trigger condition"
