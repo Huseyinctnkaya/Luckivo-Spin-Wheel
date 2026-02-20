@@ -515,6 +515,7 @@ export default function WheelEditor() {
     ),
     hideOnMobileDevices: toBoolean(parsedConfig.hideOnMobileDevices, false),
     oneSpinPerEmail: toBoolean(parsedConfig.oneSpinPerEmail, false),
+    syncToShopifyCustomers: toBoolean(parsedConfig.syncToShopifyCustomers, false),
     discountActivationTime: getValidOptionValue(
       DISCOUNT_ACTIVATION_TIME_OPTIONS,
       parsedConfig.discountActivationTime,
@@ -1850,6 +1851,24 @@ export default function WheelEditor() {
                         </div>
                       </div>
                     </Banner>
+
+                    <InlineStack align="space-between" blockAlign="center" gap="300">
+                      <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
+                        <Text as="p" variant="headingSm" fontWeight="semibold">
+                          Add emails to Shopify Customers
+                        </Text>
+                        <Text as="p" tone="subdued">
+                          Create/update customers in Shopify when visitors spin the wheel.
+                        </Text>
+                      </BlockStack>
+                      <Checkbox
+                        labelHidden
+                        label="Add emails to Shopify Customers"
+                        checked={config.syncToShopifyCustomers}
+                        onChange={(checked) => handleConfigChange("syncToShopifyCustomers", checked)}
+                      />
+                    </InlineStack>
+
                     <Select
                       label="Trigger condition"
                       options={TRIGGER_CONDITION_OPTIONS}

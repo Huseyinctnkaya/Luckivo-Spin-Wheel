@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import { authenticate } from "../shopify.server";
+import { authenticate, unauthenticated } from "../shopify.server";
 import db from "../db.server";
 
 function toBoolean(value, fallback = false) {
@@ -78,6 +78,7 @@ export const action = async ({ request }) => {
             }
 
             const oneSpinPerEmail = toBoolean(wheelSettings.oneSpinPerEmail, false);
+            const syncToShopifyCustomers = toBoolean(wheelSettings.syncToShopifyCustomers, false);
             const rawEmail = String(email || "").trim();
             const normalizedEmail = rawEmail.toLowerCase();
 
@@ -118,6 +119,24 @@ export const action = async ({ request }) => {
                     couponCode: result.value, // In real app, might generate a unique code here
                 }
             });
+
+            if (syncToShopifyCustomers && normalizedEmail) {
+                const rawName = String(body?.name || "").trim();
+                const rawPhone = String(body?.phone || "").trim();
+                const consentAccepted = toBoolean(body?.consentAccepted, false);
+
+                try {
+                    await syncSpinCustomerToShopify({
+                        shop: session.shop,
+                        email: normalizedEmail,
+                        name: rawName,
+                        phone: rawPhone,
+                        consentAccepted,
+                    });
+                } catch (syncError) {
+                    console.error("Customer sync failed:", syncError);
+                }
+            }
 
             return json({
                 segmentId: result.id,
@@ -168,4 +187,169 @@ function calculateSpinResult(segments) {
     }
 
     return segments[0]; // Fallback
+}
+
+function splitFullName(name) {
+    const clean = String(name || "").trim().replace(/\s+/g, " ");
+    if (!clean) return { firstName: "", lastName: "" };
+    const parts = clean.split(" ");
+    if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+    return {
+        firstName: parts[0],
+        lastName: parts.slice(1).join(" "),
+    };
+}
+
+function flattenGraphQlErrors(payload) {
+    if (!Array.isArray(payload?.errors)) return "";
+    return payload.errors
+        .map((error) => String(error?.message || "").trim())
+        .filter(Boolean)
+        .join("; ");
+}
+
+function flattenUserErrors(userErrors) {
+    if (!Array.isArray(userErrors)) return "";
+    return userErrors
+        .map((error) => String(error?.message || "").trim())
+        .filter(Boolean)
+        .join("; ");
+}
+
+function isMarketingFieldError(message) {
+    const lower = String(message || "").toLowerCase();
+    return lower.includes("acceptsmarketing") || lower.includes("marketing");
+}
+
+async function runAdminGraphql(admin, query, variables) {
+    const response = await admin.graphql(query, { variables });
+    const payload = await response.json();
+
+    if (!response.ok) {
+        const graphMessage = flattenGraphQlErrors(payload);
+        const fallbackText = typeof payload === "string" ? payload : JSON.stringify(payload);
+        throw new Error(graphMessage || fallbackText || "Shopify Admin request failed");
+    }
+
+    const graphMessage = flattenGraphQlErrors(payload);
+    if (graphMessage) {
+        throw new Error(graphMessage);
+    }
+
+    return payload;
+}
+
+async function findShopifyCustomerByEmail(admin, email) {
+    const query = `#graphql
+      query FindCustomerByEmail($query: String!) {
+        customers(first: 1, query: $query) {
+          nodes {
+            id
+            email
+          }
+        }
+      }
+    `;
+
+    const payload = await runAdminGraphql(admin, query, {
+        query: `email:${email}`,
+    });
+
+    return payload?.data?.customers?.nodes?.[0] || null;
+}
+
+async function createShopifyCustomer(admin, customerPayload) {
+    const mutation = `#graphql
+      mutation CustomerCreate($input: CustomerInput!) {
+        customerCreate(input: $input) {
+          customer {
+            id
+            email
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    const { firstName, lastName } = splitFullName(customerPayload.name);
+    const tags = ["Luckivo Spin Wheel"];
+    if (customerPayload.consentAccepted) {
+        tags.push("Luckivo Consent");
+    }
+
+    const baseInput = {
+        email: customerPayload.email,
+        tags,
+    };
+
+    if (firstName) baseInput.firstName = firstName;
+    if (lastName) baseInput.lastName = lastName;
+    if (customerPayload.phone) baseInput.phone = customerPayload.phone;
+    if (customerPayload.consentAccepted) {
+        baseInput.acceptsMarketing = true;
+    }
+
+    const attempts = [baseInput];
+    if (baseInput.acceptsMarketing) {
+        const fallbackInput = { ...baseInput };
+        delete fallbackInput.acceptsMarketing;
+        attempts.push(fallbackInput);
+    }
+
+    for (let index = 0; index < attempts.length; index += 1) {
+        const input = attempts[index];
+        const canRetryWithoutMarketing =
+            index < attempts.length - 1 && Object.prototype.hasOwnProperty.call(input, "acceptsMarketing");
+
+        try {
+            const payload = await runAdminGraphql(admin, mutation, { input });
+            const result = payload?.data?.customerCreate;
+            const userErrors = result?.userErrors || [];
+            const userErrorMessage = flattenUserErrors(userErrors);
+
+            if (userErrorMessage) {
+                const lowerMessage = userErrorMessage.toLowerCase();
+                if (
+                    lowerMessage.includes("already exists") ||
+                    lowerMessage.includes("has already been taken")
+                ) {
+                    return null;
+                }
+
+                if (canRetryWithoutMarketing && isMarketingFieldError(userErrorMessage)) {
+                    continue;
+                }
+
+                throw new Error(userErrorMessage);
+            }
+
+            return result?.customer || null;
+        } catch (error) {
+            const message = String(error?.message || "");
+            if (canRetryWithoutMarketing && isMarketingFieldError(message)) {
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    return null;
+}
+
+async function syncSpinCustomerToShopify({ shop, email, name, phone, consentAccepted }) {
+    if (!shop || !email) return null;
+
+    const { admin } = await unauthenticated.admin(shop);
+    const existingCustomer = await findShopifyCustomerByEmail(admin, email);
+    if (existingCustomer) return existingCustomer;
+
+    return createShopifyCustomer(admin, {
+        email,
+        name,
+        phone,
+        consentAccepted,
+    });
 }
