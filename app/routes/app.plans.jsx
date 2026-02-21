@@ -1,12 +1,46 @@
 import { json } from "@remix-run/node";
-import { useLoaderData, useSearchParams } from "@remix-run/react";
+import { useLoaderData, useSearchParams, useFetcher } from "@remix-run/react";
 import { useMemo } from "react";
-import { authenticate } from "../shopify.server";
+import { authenticate, PLANS } from "../shopify.server";
 import { Page, Card, Text, BlockStack, InlineStack, Button } from "@shopify/polaris";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
-  return json({ currentPlan: "free" });
+  const { billing } = await authenticate.admin(request);
+
+  const billingCheck = await billing
+    .check({
+      plans: [PLANS.PREMIUM_MONTHLY, PLANS.PREMIUM_YEARLY],
+      isTest: process.env.NODE_ENV !== "production",
+    })
+    .catch(() => ({ hasActivePayment: false, appSubscriptions: [] }));
+
+  let currentPlan = "free";
+  if (billingCheck.hasActivePayment && billingCheck.appSubscriptions?.length > 0) {
+    const sub = billingCheck.appSubscriptions[0];
+    currentPlan =
+      sub.name === PLANS.PREMIUM_YEARLY ? "premium_yearly" : "premium_monthly";
+  }
+
+  return json({ currentPlan });
+};
+
+export const action = async ({ request }) => {
+  const { billing } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const plan = formData.get("plan");
+
+  if (!Object.values(PLANS).includes(plan)) {
+    return json({ error: "Invalid plan." }, { status: 400 });
+  }
+
+  await billing.request({
+    plan,
+    isTest: process.env.NODE_ENV !== "production",
+    returnUrl: `${process.env.SHOPIFY_APP_URL}/app/plans`,
+  });
+
+  // billing.request() throws a redirect — this line is never reached
+  return null;
 };
 
 const FREE_FEATURES = [
@@ -29,8 +63,11 @@ const PREMIUM_FEATURES = [
 
 export default function PlansPage() {
   const { currentPlan } = useLoaderData();
+  const fetcher = useFetcher();
   const [searchParams, setSearchParams] = useSearchParams();
   const billingPeriod = searchParams.get("billing") === "yearly" ? "yearly" : "monthly";
+  const isSubmitting = fetcher.state !== "idle";
+  const isPremium = currentPlan === "premium_monthly" || currentPlan === "premium_yearly";
 
   const setBillingPeriod = (period) => {
     const params = new URLSearchParams(searchParams);
@@ -45,9 +82,16 @@ export default function PlansPage() {
     return { amount: "$3.99", suffix: "/month", note: "7-day free trial included" };
   }, [billingPeriod]);
 
+  const handleSelectPremium = () => {
+    const plan =
+      billingPeriod === "yearly" ? PLANS.PREMIUM_YEARLY : PLANS.PREMIUM_MONTHLY;
+    fetcher.submit({ plan }, { method: "post" });
+  };
+
   return (
     <Page title="Plans">
       <BlockStack gap="500">
+        {/* Billing period toggle */}
         <InlineStack>
           <div
             style={{
@@ -68,8 +112,6 @@ export default function PlansPage() {
                 padding: "8px 14px",
                 fontWeight: 600,
                 cursor: "pointer",
-                boxShadow:
-                  billingPeriod === "monthly" ? "inset 0 0 0 1px #2f6dfc" : "none",
               }}
             >
               Monthly
@@ -85,8 +127,6 @@ export default function PlansPage() {
                 padding: "8px 14px",
                 fontWeight: 600,
                 cursor: "pointer",
-                boxShadow:
-                  billingPeriod === "yearly" ? "inset 0 0 0 1px #2f6dfc" : "none",
               }}
             >
               Yearly
@@ -94,6 +134,7 @@ export default function PlansPage() {
           </div>
         </InlineStack>
 
+        {/* Plan cards */}
         <div
           style={{
             display: "grid",
@@ -106,9 +147,8 @@ export default function PlansPage() {
             subtitle="Perfect to get started."
             amount="$0"
             suffix="/month"
-            priceColor="#111111"
             features={FREE_FEATURES}
-            selected={currentPlan === "free"}
+            selected={!isPremium}
             ctaLabel="Selected"
             ctaDisabled
           />
@@ -117,11 +157,13 @@ export default function PlansPage() {
             subtitle="For stores that want full growth tools."
             amount={premiumPricing.amount}
             suffix={premiumPricing.suffix}
-            priceColor="#111111"
             note={premiumPricing.note}
             features={PREMIUM_FEATURES}
-            selected={currentPlan === "premium"}
-            ctaLabel={currentPlan === "premium" ? "Current Plan" : "Start premium"}
+            selected={isPremium}
+            ctaLabel={isPremium ? "Current Plan" : "Start premium"}
+            ctaDisabled={isPremium}
+            loading={isSubmitting && !isPremium}
+            onSelect={handleSelectPremium}
           />
         </div>
       </BlockStack>
@@ -134,36 +176,35 @@ function PlanCard({
   subtitle,
   amount,
   suffix,
-  priceColor,
   note,
   features,
   selected,
   ctaLabel,
   ctaDisabled = false,
+  loading = false,
+  onSelect,
 }) {
   return (
     <Card>
       <BlockStack gap="300">
-        <InlineStack align="space-between" blockAlign="center">
-          <InlineStack gap="200" blockAlign="center">
-            <Text as="h2" variant="headingMd" fontWeight="bold">
-              {title}
-            </Text>
-            {selected ? (
-              <span
-                style={{
-                  padding: "3px 10px",
-                  borderRadius: "999px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  background: "#aee9c0",
-                  color: "#0f5132",
-                }}
-              >
-                Selected
-              </span>
-            ) : null}
-          </InlineStack>
+        <InlineStack gap="200" blockAlign="center">
+          <Text as="h2" variant="headingMd" fontWeight="bold">
+            {title}
+          </Text>
+          {selected && (
+            <span
+              style={{
+                padding: "3px 10px",
+                borderRadius: "999px",
+                fontSize: "13px",
+                fontWeight: 600,
+                background: "#aee9c0",
+                color: "#0f5132",
+              }}
+            >
+              Selected
+            </span>
+          )}
         </InlineStack>
 
         <Text as="p" tone="subdued">
@@ -172,18 +213,18 @@ function PlanCard({
 
         <InlineStack gap="100" blockAlign="end">
           <Text as="p" variant="heading2xl" fontWeight="bold">
-            <span style={{ color: priceColor }}>{amount}</span>
+            {amount}
           </Text>
           <Text as="p" tone="subdued">
             {suffix}
           </Text>
         </InlineStack>
 
-        {note ? (
+        {note && (
           <Text as="p" tone="subdued" variant="bodySm">
             {note}
           </Text>
-        ) : null}
+        )}
 
         <BlockStack gap="200">
           {features.map((feature) => (
@@ -219,7 +260,9 @@ function PlanCard({
           <Button
             fullWidth
             variant={selected ? "secondary" : "primary"}
-            disabled={ctaDisabled || selected}
+            disabled={ctaDisabled}
+            loading={loading}
+            onClick={onSelect}
           >
             {ctaLabel}
           </Button>
