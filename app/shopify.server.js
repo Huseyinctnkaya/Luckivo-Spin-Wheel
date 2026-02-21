@@ -26,11 +26,6 @@ const shopify = shopifyApp({
       interval: BillingInterval.Every30Days,
       trialDays: 7,
     },
-    [PLANS.PREMIUM_YEARLY]: {
-      amount: 39.99,
-      currencyCode: "USD",
-      interval: BillingInterval.Annual,
-    },
   },
   future: {
     unstable_newEmbeddedAuthStrategy: true,
