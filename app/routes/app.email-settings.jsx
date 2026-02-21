@@ -345,7 +345,7 @@ export default function EmailSettingsPage() {
             </Card>
 
             {/* Template editor */}
-            <Card>
+            {enabled && <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd" fontWeight="semibold">
                   Email Template
@@ -459,7 +459,7 @@ export default function EmailSettingsPage() {
                 </BlockStack>
 
               </BlockStack>
-            </Card>
+            </Card>}
 
           </BlockStack>
         </Layout.Section>
