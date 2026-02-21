@@ -2,7 +2,7 @@
 
 client_id = "7dab8c453f7b44b3c15da2b89b004213"
 name = "Luckivo - Spin Wheel"
-application_url = "https://feat-psychological-harold-walks.trycloudflare.com"
+application_url = "https://out-occasions-remaining-alot.trycloudflare.com"
 embedded = true
 
 [build]
@@ -24,9 +24,9 @@ api_version = "2026-04"
 scopes = "write_products,read_discounts,write_discounts,read_customers,write_customers,read_themes"
 
 [auth]
-redirect_urls = [ "https://feat-psychological-harold-walks.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://out-occasions-remaining-alot.trycloudflare.com/api/auth" ]
 
 [app_proxy]
-url = "https://feat-psychological-harold-walks.trycloudflare.com/app/proxy"
+url = "https://out-occasions-remaining-alot.trycloudflare.com/app/proxy"
 subpath = "wheel-proxy"
 prefix = "apps"
