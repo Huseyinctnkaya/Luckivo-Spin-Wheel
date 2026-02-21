@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useFetcher } from "@remix-run/react";
 import {
   Page,
   Card,
@@ -11,7 +11,7 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -138,29 +138,37 @@ export default function ImportExportPage() {
   const fetcher = useFetcher();
   const [file, setFile] = useState(null);
   const [importStatus, setImportStatus] = useState(null);
+  const lastExportRef = useRef(null);
 
   const isExporting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "export";
   const isImporting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "import";
 
   // Handle export response — trigger download
-  if (fetcher.data?.exportData && !isExporting) {
-    const blob = new Blob([JSON.stringify(fetcher.data.exportData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `wheel-app-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    fetcher.data.exportData = null;
-  }
+  useEffect(() => {
+    const exportData = fetcher.data?.exportData;
+    if (exportData && exportData !== lastExportRef.current) {
+      lastExportRef.current = exportData;
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `wheel-app-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }, [fetcher.data]);
 
   // Handle import response
-  if (fetcher.data?.success && fetcher.data?.imported != null && importStatus !== "done") {
-    setImportStatus("done");
-    setFile(null);
-  }
+  useEffect(() => {
+    if (fetcher.data?.success && fetcher.data?.imported != null) {
+      setImportStatus("done");
+      setFile(null);
+    }
+  }, [fetcher.data]);
 
   const handleExport = () => {
     const formData = new FormData();
