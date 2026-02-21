@@ -5,8 +5,6 @@ import {
   Card,
   Text,
   BlockStack,
-  InlineStack,
-  IndexTable,
   DataTable,
   Badge,
   EmptyState,
@@ -14,7 +12,6 @@ import {
   Popover,
   ActionList,
   Tooltip,
-  Box,
 } from "@shopify/polaris";
 import {
   CalendarIcon,
@@ -24,6 +21,11 @@ import {
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState, useCallback } from "react";
+
+function computeDelta(curr, prev) {
+  if (prev === 0) return curr > 0 ? 100 : 0;
+  return Math.round(((curr - prev) / prev) * 100);
+}
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -43,6 +45,15 @@ export const loader = async ({ request }) => {
 
   const dateFilter = { gte: startDate, lte: endDate };
 
+  // Previous period (same length, immediately before current)
+  const prevEnd = new Date(startDate);
+  prevEnd.setDate(prevEnd.getDate() - 1);
+  prevEnd.setHours(23, 59, 59, 999);
+  const prevStart = new Date(prevEnd);
+  prevStart.setDate(prevStart.getDate() - days + 1);
+  prevStart.setHours(0, 0, 0, 0);
+  const prevFilter = { gte: prevStart, lte: prevEnd };
+
   const formatDate = (d) =>
     d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const dateRangeLabel = `${formatDate(startDate)} - ${formatDate(endDate)}`;
@@ -55,6 +66,11 @@ export const loader = async ({ request }) => {
       wheels,
       prizeDistribution,
       recentSpins,
+      prevImpressions,
+      prevSpins,
+      prevEmails,
+      allSpinDates,
+      allImpressionDates,
     ] = await Promise.all([
       db.impression.count({
         where: { shop: session.shop, createdAt: dateFilter },
@@ -96,12 +112,41 @@ export const loader = async ({ request }) => {
         orderBy: { createdAt: "desc" },
         take: 20,
       }),
+      // Previous period counts for delta
+      db.impression.count({
+        where: { shop: session.shop, createdAt: prevFilter },
+      }),
+      db.spin.count({
+        where: { wheel: { shop: session.shop }, createdAt: prevFilter },
+      }),
+      db.spin.count({
+        where: {
+          wheel: { shop: session.shop },
+          createdAt: prevFilter,
+          customerEmail: { not: null },
+        },
+      }),
+      // Daily breakdown for chart
+      db.spin.findMany({
+        where: { wheel: { shop: session.shop }, createdAt: dateFilter },
+        select: { createdAt: true },
+      }),
+      db.impression.findMany({
+        where: { shop: session.shop, createdAt: dateFilter },
+        select: { createdAt: true },
+      }),
     ]);
 
     const conversionRate =
       totalImpressions > 0
         ? ((totalSpins / totalImpressions) * 100).toFixed(1)
         : "0";
+
+    const prevConversionNum =
+      prevImpressions > 0 ? (prevSpins / prevImpressions) * 100 : 0;
+    const currConversionNum =
+      totalImpressions > 0 ? (totalSpins / totalImpressions) * 100 : 0;
+    const conversionDelta = Math.round(currConversionNum - prevConversionNum);
 
     const wheelPerformance = wheels.map((w) => ({
       id: w.id,
@@ -128,6 +173,25 @@ export const loader = async ({ request }) => {
           : "0",
     }));
 
+    // Build daily chart data — one entry per day in the range
+    const dayMap = {};
+    for (let i = 0; i < days; i++) {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      dayMap[key] = { date: label, impressions: 0, spins: 0 };
+    }
+    allSpinDates.forEach((s) => {
+      const key = new Date(s.createdAt).toISOString().slice(0, 10);
+      if (dayMap[key]) dayMap[key].spins++;
+    });
+    allImpressionDates.forEach((imp) => {
+      const key = new Date(imp.createdAt).toISOString().slice(0, 10);
+      if (dayMap[key]) dayMap[key].impressions++;
+    });
+    const dailyData = Object.values(dayMap);
+
     return json({
       totalImpressions,
       totalSpins,
@@ -146,6 +210,13 @@ export const loader = async ({ request }) => {
       days,
       offset,
       dateRangeLabel,
+      deltas: {
+        impressions: computeDelta(totalImpressions, prevImpressions),
+        spins: computeDelta(totalSpins, prevSpins),
+        emails: computeDelta(emailsCollected, prevEmails),
+        conversion: conversionDelta,
+      },
+      dailyData,
     });
   } catch (error) {
     console.error("Analytics Loader Error:", error);
@@ -160,6 +231,8 @@ export const loader = async ({ request }) => {
       days,
       offset,
       dateRangeLabel,
+      deltas: { impressions: 0, spins: 0, emails: 0, conversion: 0 },
+      dailyData: [],
     });
   }
 };
@@ -176,6 +249,8 @@ export default function AnalyticsPage() {
     days,
     offset,
     dateRangeLabel,
+    deltas,
+    dailyData,
   } = useLoaderData();
 
   const [, setSearchParams] = useSearchParams();
@@ -216,10 +291,10 @@ export default function AnalyticsPage() {
   };
 
   const stats = [
-    { label: "Popups Displayed", value: totalImpressions, tooltip: "Number of times the spin wheel popup was shown." },
-    { label: "Forms Submitted", value: totalSpins, tooltip: "Number of wheel spins completed by visitors." },
-    { label: "Emails Collected", value: emailsCollected, tooltip: "Number of emails collected from visitors." },
-    { label: "Conversions", value: `${conversionRate}%`, tooltip: "Percentage of popups that resulted in a spin." },
+    { label: "Popups Displayed", value: totalImpressions, tooltip: "Number of times the spin wheel popup was shown.", delta: deltas.impressions },
+    { label: "Forms Submitted", value: totalSpins, tooltip: "Number of wheel spins completed by visitors.", delta: deltas.spins },
+    { label: "Emails Collected", value: emailsCollected, tooltip: "Number of emails collected from visitors.", delta: deltas.emails },
+    { label: "Conversions", value: `${conversionRate}%`, tooltip: "Percentage of popups that resulted in a spin.", delta: deltas.conversion, isConversionDelta: true },
   ];
 
   return (
@@ -314,6 +389,16 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
+        {/* Daily Trend Chart */}
+        <Card>
+          <BlockStack gap="300">
+            <Text variant="headingMd" as="h2" fontWeight="bold">
+              Daily Activity
+            </Text>
+            <DailyChart data={dailyData} />
+          </BlockStack>
+        </Card>
+
         {/* Wheel Performance */}
         {wheelPerformance.length === 0 ? (
           <Card>
@@ -326,56 +411,23 @@ export default function AnalyticsPage() {
             </EmptyState>
           </Card>
         ) : (
-          <Card padding="0">
-            <Box padding="400" paddingBlockEnd="200">
+          <Card>
+            <BlockStack gap="300">
               <Text variant="headingMd" as="h2" fontWeight="bold">
                 Wheel Performance
               </Text>
-            </Box>
-            <IndexTable
-              resourceName={{ singular: "wheel", plural: "wheels" }}
-              itemCount={wheelPerformance.length}
-              headings={[
-                { title: "Wheel" },
-                { title: "Status" },
-                { title: "Impressions", alignment: "end" },
-                { title: "Spins", alignment: "end" },
-                { title: "Conversion Rate", alignment: "end" },
-              ]}
-              selectable={false}
-            >
-              {wheelPerformance.map((wheel, index) => (
-                <IndexTable.Row id={wheel.id} key={wheel.id} position={index}>
-                  <IndexTable.Cell>
-                    <Text variant="bodyMd" fontWeight="bold" as="span">
-                      {wheel.title}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    {wheel.isActive ? (
-                      <Badge tone="success">Active</Badge>
-                    ) : (
-                      <Badge tone="attention">Draft</Badge>
-                    )}
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Text as="span" alignment="end" variant="bodyMd">
-                      {wheel.impressions}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Text as="span" alignment="end" variant="bodyMd">
-                      {wheel.spins}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Text as="span" alignment="end" variant="bodyMd">
-                      {wheel.conversionRate}%
-                    </Text>
-                  </IndexTable.Cell>
-                </IndexTable.Row>
-              ))}
-            </IndexTable>
+              <DataTable
+                columnContentTypes={["text", "text", "numeric", "numeric", "numeric"]}
+                headings={["Wheel", "Status", "Impressions", "Spins", "Conversion Rate"]}
+                rows={wheelPerformance.map((wheel) => [
+                  <Text variant="bodyMd" fontWeight="bold" as="span" key={wheel.id}>{wheel.title}</Text>,
+                  wheel.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="attention">Draft</Badge>,
+                  wheel.impressions,
+                  wheel.spins,
+                  `${wheel.conversionRate}%`,
+                ])}
+              />
+            </BlockStack>
           </Card>
         )}
 
@@ -401,57 +453,28 @@ export default function AnalyticsPage() {
 
         {/* Recent Activity */}
         {recentSpins.length > 0 && (
-          <Card padding="0">
-            <Box padding="400" paddingBlockEnd="200">
+          <Card>
+            <BlockStack gap="300">
               <Text variant="headingMd" as="h2" fontWeight="bold">
                 Recent Activity
               </Text>
-            </Box>
-            <IndexTable
-              resourceName={{ singular: "spin", plural: "spins" }}
-              itemCount={recentSpins.length}
-              headings={[
-                { title: "Wheel" },
-                { title: "Email" },
-                { title: "Prize Won" },
-                { title: "Coupon Code" },
-                { title: "Date" },
-              ]}
-              selectable={false}
-            >
-              {recentSpins.map((spin, index) => (
-                <IndexTable.Row id={spin.id} key={spin.id} position={index}>
-                  <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span">
-                      {spin.wheelTitle}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span">
-                      {spin.customerEmail}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Badge>{spin.result}</Badge>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span" tone="subdued">
-                      {spin.couponCode}
-                    </Text>
-                  </IndexTable.Cell>
-                  <IndexTable.Cell>
-                    <Text variant="bodyMd" as="span">
-                      {new Date(spin.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </Text>
-                  </IndexTable.Cell>
-                </IndexTable.Row>
-              ))}
-            </IndexTable>
+              <DataTable
+                columnContentTypes={["text", "text", "text", "text", "text"]}
+                headings={["Wheel", "Email", "Prize Won", "Coupon Code", "Date"]}
+                rows={recentSpins.map((spin) => [
+                  spin.wheelTitle,
+                  spin.customerEmail,
+                  <Badge key={spin.id}>{spin.result}</Badge>,
+                  spin.couponCode,
+                  new Date(spin.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                ])}
+              />
+            </BlockStack>
           </Card>
         )}
 
@@ -463,6 +486,11 @@ export default function AnalyticsPage() {
 
 function StatCell({ stat, titleStyle }) {
   const [hovered, setHovered] = useState(false);
+  const { delta, isConversionDelta } = stat;
+  const hasData = delta !== undefined && delta !== null;
+  const deltaColor = delta > 0 ? "#008060" : delta < 0 ? "#d72c0d" : "#8c9196";
+  const deltaArrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "—";
+  const deltaSuffix = isConversionDelta ? "pp" : "%";
 
   return (
     <div
@@ -484,10 +512,124 @@ function StatCell({ stat, titleStyle }) {
           <span style={titleStyle}>{stat.label}</span>
         </Text>
       </Tooltip>
-      <div style={{ marginTop: "4px" }}>
+      <div style={{ marginTop: "4px", display: "flex", alignItems: "baseline", gap: "8px" }}>
         <Text variant="headingLg" as="p" fontWeight="bold" tone="success">
           {stat.value}
         </Text>
+        {hasData && (
+          <Tooltip content={`vs previous ${deltaSuffix === "pp" ? "period (percentage points)" : "period"}`}>
+            <span style={{ fontSize: "12px", fontWeight: "600", color: deltaColor, whiteSpace: "nowrap" }}>
+              {deltaArrow} {Math.abs(delta)}{deltaSuffix}
+            </span>
+          </Tooltip>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DailyChart({ data }) {
+  if (!data || data.length === 0) {
+    return <Text tone="subdued">No activity data for this period.</Text>;
+  }
+
+  const maxValue = Math.max(...data.flatMap((d) => [d.impressions, d.spins]), 1);
+
+  const svgW = 600;
+  const svgH = 180;
+  const padTop = 16;
+  const padRight = 12;
+  const padBottom = 36;
+  const padLeft = 36;
+  const chartW = svgW - padLeft - padRight;
+  const chartH = svgH - padTop - padBottom;
+
+  const tickCount = 4;
+  const ticks = Array.from({ length: tickCount + 1 }, (_, i) => {
+    const val = Math.round((maxValue / tickCount) * i);
+    const y = padTop + chartH - (val / maxValue) * chartH;
+    return { val, y };
+  });
+
+  const groupW = chartW / data.length;
+  const barW = Math.min(Math.floor(groupW * 0.32), 18);
+
+  // Only show every Nth label to avoid crowding
+  const labelEvery = data.length <= 14 ? 1 : data.length <= 30 ? 3 : 7;
+
+  return (
+    <div style={{ width: "100%" }}>
+      <svg
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        style={{ width: "100%", height: "auto", display: "block" }}
+        aria-label="Daily activity chart"
+      >
+        {/* Grid lines + Y labels */}
+        {ticks.map((tick) => (
+          <g key={tick.val}>
+            <line
+              x1={padLeft} y1={tick.y}
+              x2={svgW - padRight} y2={tick.y}
+              stroke="#e3e3e3" strokeWidth="1"
+            />
+            <text
+              x={padLeft - 6} y={tick.y + 4}
+              textAnchor="end" fontSize="10" fill="#8c9196"
+            >
+              {tick.val}
+            </text>
+          </g>
+        ))}
+
+        {/* Bars */}
+        {data.map((d, i) => {
+          const cx = padLeft + i * groupW + groupW / 2;
+          const impH = (d.impressions / maxValue) * chartH;
+          const spinH = (d.spins / maxValue) * chartH;
+          const impX = cx - barW - 1;
+          const spinX = cx + 1;
+
+          return (
+            <g key={d.date}>
+              <title>{d.date}: {d.impressions} impressions, {d.spins} spins</title>
+              {/* Impression bar */}
+              <rect
+                x={impX}
+                y={padTop + chartH - impH}
+                width={barW} height={impH}
+                fill="#c4b5fd" rx="2"
+              />
+              {/* Spin bar */}
+              <rect
+                x={spinX}
+                y={padTop + chartH - spinH}
+                width={barW} height={spinH}
+                fill="#6c5ce7" rx="2"
+              />
+              {/* X-axis label */}
+              {i % labelEvery === 0 && (
+                <text
+                  x={cx} y={svgH - 6}
+                  textAnchor="middle" fontSize="9" fill="#8c9196"
+                >
+                  {d.date}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: "20px", justifyContent: "center", marginTop: "4px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <div style={{ width: "12px", height: "10px", borderRadius: "2px", background: "#c4b5fd" }} />
+          <Text variant="bodySm" tone="subdued">Impressions</Text>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <div style={{ width: "12px", height: "10px", borderRadius: "2px", background: "#6c5ce7" }} />
+          <Text variant="bodySm" tone="subdued">Spins</Text>
+        </div>
       </div>
     </div>
   );
