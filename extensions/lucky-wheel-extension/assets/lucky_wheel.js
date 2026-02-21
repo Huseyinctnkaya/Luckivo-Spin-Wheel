@@ -996,6 +996,25 @@
       const data = await response.json();
       if (!data || !data.wheel) return;
 
+      // Inject custom code if provided
+      if (data.customCode && data.customCode.trim()) {
+        const customContainer = document.createElement("div");
+        customContainer.innerHTML = data.customCode;
+        // Move script tags to execute them properly
+        Array.from(customContainer.querySelectorAll("style")).forEach((el) => {
+          document.head.appendChild(el.cloneNode(true));
+        });
+        Array.from(customContainer.querySelectorAll("script")).forEach((el) => {
+          const script = document.createElement("script");
+          if (el.src) {
+            script.src = el.src;
+          } else {
+            script.textContent = el.textContent;
+          }
+          document.head.appendChild(script);
+        });
+      }
+
       wheelConfig = data.wheel;
       wheelSettings = parseWheelSettings(wheelConfig.config);
 

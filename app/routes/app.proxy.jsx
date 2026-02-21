@@ -30,13 +30,16 @@ export const loader = async ({ request }) => {
 
         // Subpath: apps/wheel-proxy/active-wheel
         if (pathname.endsWith("/active-wheel")) {
-            const wheel = await db.wheel.findFirst({
-                where: { shop: session.shop, isActive: true },
-                include: { segments: true },
-                orderBy: { updatedAt: "desc" },
-            });
+            const [wheel, customCodeRecord] = await Promise.all([
+                db.wheel.findFirst({
+                    where: { shop: session.shop, isActive: true },
+                    include: { segments: true },
+                    orderBy: { updatedAt: "desc" },
+                }),
+                db.customCode.findUnique({ where: { shop: session.shop } }),
+            ]);
 
-            return json({ wheel }, { headers: noStoreHeaders });
+            return json({ wheel, customCode: customCodeRecord?.code || "" }, { headers: noStoreHeaders });
         }
 
         return json({ error: "Not Found" }, { status: 404, headers: noStoreHeaders });
