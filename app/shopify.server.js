@@ -6,10 +6,7 @@ import {
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
 
-export const PLANS = {
-  PREMIUM_MONTHLY: "Premium Monthly",
-  PREMIUM_YEARLY: "Premium Yearly",
-};
+import { PLANS } from "./plans";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
 
@@ -45,6 +42,7 @@ const shopify = shopifyApp({
 });
 
 export default shopify;
+export { PLANS };
 export const apiVersion = ApiVersion.January25;
 export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
 export const authenticate = shopify.authenticate;

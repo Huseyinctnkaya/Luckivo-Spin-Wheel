@@ -1,7 +1,8 @@
 import { json } from "@remix-run/node";
 import { useLoaderData, useSearchParams, useFetcher } from "@remix-run/react";
 import { useMemo } from "react";
-import { authenticate, PLANS } from "../shopify.server";
+import { authenticate } from "../shopify.server";
+import { PLANS } from "../plans";
 import { Page, Card, Text, BlockStack, InlineStack, Button } from "@shopify/polaris";
 
 export const loader = async ({ request }) => {
