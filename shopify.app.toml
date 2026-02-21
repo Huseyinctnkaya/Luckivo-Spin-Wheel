@@ -2,7 +2,7 @@
 
 client_id = "7dab8c453f7b44b3c15da2b89b004213"
 name = "Luckivo - Spin Wheel"
-application_url = "https://dog-films-houston-ali.trycloudflare.com"
+application_url = "https://included-mileage-holiday-knowledge.trycloudflare.com"
 embedded = true
 
 [build]
@@ -24,9 +24,9 @@ api_version = "2026-04"
 scopes = "write_products,read_discounts,write_discounts,read_customers,write_customers,read_themes"
 
 [auth]
-redirect_urls = [ "https://dog-films-houston-ali.trycloudflare.com/api/auth" ]
+redirect_urls = [ "https://included-mileage-holiday-knowledge.trycloudflare.com/api/auth" ]
 
 [app_proxy]
-url = "https://dog-films-houston-ali.trycloudflare.com/app/proxy"
+url = "https://included-mileage-holiday-knowledge.trycloudflare.com/app/proxy"
 subpath = "wheel-proxy"
 prefix = "apps"
