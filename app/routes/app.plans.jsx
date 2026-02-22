@@ -78,7 +78,7 @@ export const action = async ({ request }) => {
       prorate: false,
     });
 
-    return redirect(returnUrl);
+    return redirect("/app/plans");
   }
 
   await billing.request({
