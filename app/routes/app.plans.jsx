@@ -1,4 +1,4 @@
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import { useLoaderData, useFetcher } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { PLANS } from "../plans";
@@ -17,7 +17,9 @@ export const loader = async ({ request }) => {
   const isActive = billingCheck.hasActivePayment;
 
   // Detect if still in trial
-  const activeSub = billingCheck.appSubscriptions?.[0];
+  const activeSub =
+    billingCheck.appSubscriptions?.find((subscription) => subscription.status === "ACTIVE") ??
+    billingCheck.appSubscriptions?.[0];
   const isOnTrial =
     isActive &&
     activeSub?.trialDays > 0 &&
@@ -25,11 +27,33 @@ export const loader = async ({ request }) => {
     activeSub?.currentPeriodEnd != null &&
     new Date(activeSub.currentPeriodEnd) > new Date();
 
-  return json({ isActive, isOnTrial });
+  return json({
+    isActive,
+    isOnTrial,
+    subscriptionId: activeSub?.id ?? null,
+  });
 };
 
 export const action = async ({ request }) => {
-  const { billing } = await authenticate.admin(request);
+  const { billing, session } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "cancel") {
+    const subscriptionId = formData.get("subscriptionId");
+
+    if (typeof subscriptionId !== "string" || !subscriptionId) {
+      return json({ error: "Missing subscription id" }, { status: 400 });
+    }
+
+    await billing.cancel({
+      subscriptionId,
+      isTest: process.env.NODE_ENV !== "production",
+      prorate: false,
+    });
+
+    return redirect(`https://${session.shop}/admin/settings/billing`);
+  }
 
   await billing.request({
     plan: PLANS.PREMIUM_MONTHLY,
@@ -51,12 +75,20 @@ const FEATURES = [
 ];
 
 export default function PlansPage() {
-  const { isActive, isOnTrial } = useLoaderData();
+  const { isActive, isOnTrial, subscriptionId } = useLoaderData();
   const fetcher = useFetcher();
   const isSubmitting = fetcher.state !== "idle";
+  const activeIntent = fetcher.formData?.get("intent");
+  const isStarting = isSubmitting && activeIntent === "start";
+  const isCancelling = isSubmitting && activeIntent === "cancel";
 
   const handleStart = () => {
-    fetcher.submit({}, { method: "post" });
+    fetcher.submit({ intent: "start" }, { method: "post" });
+  };
+
+  const handleCancel = () => {
+    if (!subscriptionId) return;
+    fetcher.submit({ intent: "cancel", subscriptionId }, { method: "post" });
   };
 
   return (
@@ -137,12 +169,23 @@ export default function PlansPage() {
                 fullWidth
                 variant="primary"
                 disabled={isActive}
-                loading={isSubmitting}
+                loading={isStarting}
                 onClick={handleStart}
               >
                 {isActive ? "Current Plan" : "Start 7-day free trial"}
               </Button>
             </div>
+            {isActive && subscriptionId && (
+              <Button
+                fullWidth
+                tone="critical"
+                variant="plain"
+                loading={isCancelling}
+                onClick={handleCancel}
+              >
+                Cancel plan
+              </Button>
+            )}
           </BlockStack>
         </Card>
       </div>
