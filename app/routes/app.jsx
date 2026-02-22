@@ -19,9 +19,10 @@ const getBillingIsTest = () => {
 };
 
 export const loader = async ({ request }) => {
-  const { billing } = await authenticate.admin(request);
-  const appUrl = process.env.SHOPIFY_APP_URL || new URL(request.url).origin;
+  const { billing, session } = await authenticate.admin(request);
   const isTest = getBillingIsTest();
+  const storeName = session.shop.replace(".myshopify.com", "");
+  const returnUrl = `https://admin.shopify.com/store/${storeName}/apps/${process.env.SHOPIFY_API_KEY}`;
 
   await billing.require({
     plans: [PLANS.PREMIUM_MONTHLY],
@@ -30,7 +31,7 @@ export const loader = async ({ request }) => {
       billing.request({
         plan: PLANS.PREMIUM_MONTHLY,
         isTest,
-        returnUrl: `${appUrl}/app/plans`,
+        returnUrl,
       }),
   });
 

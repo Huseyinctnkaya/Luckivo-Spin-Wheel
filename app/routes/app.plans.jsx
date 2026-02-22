@@ -61,6 +61,8 @@ export const action = async ({ request }) => {
   const { billing, session } = await authenticate.admin(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
+  const storeName = session.shop.replace(".myshopify.com", "");
+  const returnUrl = `https://admin.shopify.com/store/${storeName}/apps/${process.env.SHOPIFY_API_KEY}`;
 
   if (intent === "cancel") {
     const subscriptionId = formData.get("subscriptionId");
@@ -76,13 +78,13 @@ export const action = async ({ request }) => {
       prorate: false,
     });
 
-    return redirect(`https://${session.shop}/admin/settings/billing`);
+    return redirect(returnUrl);
   }
 
   await billing.request({
     plan: PLANS.PREMIUM_MONTHLY,
     isTest: getBillingIsTest(),
-    returnUrl: `${process.env.SHOPIFY_APP_URL}/app/plans`,
+    returnUrl,
   });
 
   return null;
