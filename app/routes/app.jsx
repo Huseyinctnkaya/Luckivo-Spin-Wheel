@@ -4,7 +4,7 @@ import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import polarisFixes from "../styles/polaris-fixes.css?url";
-import { authenticate } from "../shopify.server";
+import { authenticate, PLANS } from "../shopify.server";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
@@ -12,7 +12,19 @@ export const links = () => [
 ];
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { billing } = await authenticate.admin(request);
+  const appUrl = process.env.SHOPIFY_APP_URL || new URL(request.url).origin;
+
+  await billing.require({
+    plans: [PLANS.PREMIUM_MONTHLY],
+    isTest: process.env.NODE_ENV !== "production",
+    onFailure: async () =>
+      billing.request({
+        plan: PLANS.PREMIUM_MONTHLY,
+        isTest: process.env.NODE_ENV !== "production",
+        returnUrl: `${appUrl}/app`,
+      }),
+  });
 
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };
 };
