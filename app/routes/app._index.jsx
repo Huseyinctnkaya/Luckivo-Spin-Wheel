@@ -489,46 +489,62 @@ export default function Index() {
             Need help or customization?
           </Text>
           <div style={{ display: "flex", gap: "16px", marginTop: "16px" }}>
-            <div
-              style={{
-                flex: 1,
-                background: "#f6f6f7",
-                borderRadius: "10px",
-                padding: "16px",
-              }}
+            <a
+              href="https://landing.luckivo.app/contact"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ flex: 1, textDecoration: "none", color: "inherit" }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Icon source={EmailIcon} tone="base" />
-                <Text variant="headingSm" as="h4" fontWeight="semibold">
-                  Email Support
-                </Text>
+              <div
+                style={{
+                  flex: 1,
+                  background: "#f6f6f7",
+                  borderRadius: "10px",
+                  padding: "16px",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Icon source={EmailIcon} tone="base" />
+                  <Text variant="headingSm" as="h4" fontWeight="semibold">
+                    Email Support
+                  </Text>
+                </div>
+                <div style={{ marginTop: "4px" }}>
+                  <Text variant="bodyMd" tone="subdued">
+                    Send us an email and we'll get back to you as soon as possible.
+                  </Text>
+                </div>
               </div>
-              <div style={{ marginTop: "4px" }}>
-                <Text variant="bodyMd" tone="subdued">
-                  Send us an email and we'll get back to you as soon as possible.
-                </Text>
-              </div>
-            </div>
-            <div
-              style={{
-                flex: 1,
-                background: "#f6f6f7",
-                borderRadius: "10px",
-                padding: "16px",
-              }}
+            </a>
+            <a
+              href="https://landing.luckivo.app/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ flex: 1, textDecoration: "none", color: "inherit" }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <Icon source={NoteIcon} tone="base" />
-                <Text variant="headingSm" as="h4" fontWeight="semibold">
-                  Documentation
-                </Text>
+              <div
+                style={{
+                  flex: 1,
+                  background: "#f6f6f7",
+                  borderRadius: "10px",
+                  padding: "16px",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Icon source={NoteIcon} tone="base" />
+                  <Text variant="headingSm" as="h4" fontWeight="semibold">
+                    Documentation
+                  </Text>
+                </div>
+                <div style={{ marginTop: "4px" }}>
+                  <Text variant="bodyMd" tone="subdued">
+                    Find solutions with our docs and tutorials.
+                  </Text>
+                </div>
               </div>
-              <div style={{ marginTop: "4px" }}>
-                <Text variant="bodyMd" tone="subdued">
-                  Find solutions with our docs and tutorials.
-                </Text>
-              </div>
-            </div>
+            </a>
           </div>
         </div>
         <div style={{ height: "24px" }} />
