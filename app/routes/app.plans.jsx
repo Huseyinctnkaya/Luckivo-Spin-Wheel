@@ -6,31 +6,47 @@ import { Page, Card, Text, BlockStack, InlineStack, Button, Badge } from "@shopi
 
 export const loader = async ({ request }) => {
   const { billing } = await authenticate.admin(request);
+  const defaultIsTest = process.env.NODE_ENV !== "production";
+  const checkOptions = [defaultIsTest, !defaultIsTest];
+  const billingChecks = await Promise.all(
+    checkOptions.map((isTest) =>
+      billing
+        .check({
+          plans: [PLANS.PREMIUM_MONTHLY],
+          isTest,
+        })
+        .catch(() => ({ hasActivePayment: false, appSubscriptions: [] })),
+    ),
+  );
 
-  const billingCheck = await billing
-    .check({
-      plans: [PLANS.PREMIUM_MONTHLY],
-      isTest: process.env.NODE_ENV !== "production",
-    })
-    .catch(() => ({ hasActivePayment: false, appSubscriptions: [] }));
+  const billingCheck =
+    billingChecks.find((check) => check.hasActivePayment) ??
+    billingChecks[0] ?? { hasActivePayment: false, appSubscriptions: [] };
 
   const isActive = billingCheck.hasActivePayment;
 
-  // Detect if still in trial
+  // Pick the currently active subscription when available.
   const activeSub =
     billingCheck.appSubscriptions?.find((subscription) => subscription.status === "ACTIVE") ??
     billingCheck.appSubscriptions?.[0];
+  const createdAt = activeSub?.createdAt ? new Date(activeSub.createdAt) : null;
+  const trialEndsAt =
+    createdAt && activeSub?.trialDays > 0
+      ? new Date(createdAt.getTime() + activeSub.trialDays * 24 * 60 * 60 * 1000)
+      : null;
   const isOnTrial =
     isActive &&
-    activeSub?.trialDays > 0 &&
     activeSub?.status === "ACTIVE" &&
-    activeSub?.currentPeriodEnd != null &&
-    new Date(activeSub.currentPeriodEnd) > new Date();
+    activeSub?.trialDays > 0 &&
+    trialEndsAt != null &&
+    trialEndsAt > new Date();
 
   return json({
     isActive,
     isOnTrial,
     subscriptionId: activeSub?.id ?? null,
+    subscriptionIsTest: activeSub?.test ?? defaultIsTest,
+    trialEndsAt: trialEndsAt ? trialEndsAt.toISOString() : null,
   });
 };
 
@@ -41,6 +57,7 @@ export const action = async ({ request }) => {
 
   if (intent === "cancel") {
     const subscriptionId = formData.get("subscriptionId");
+    const subscriptionIsTest = formData.get("subscriptionIsTest") === "true";
 
     if (typeof subscriptionId !== "string" || !subscriptionId) {
       return json({ error: "Missing subscription id" }, { status: 400 });
@@ -48,7 +65,7 @@ export const action = async ({ request }) => {
 
     await billing.cancel({
       subscriptionId,
-      isTest: process.env.NODE_ENV !== "production",
+      isTest: subscriptionIsTest,
       prorate: false,
     });
 
@@ -75,12 +92,17 @@ const FEATURES = [
 ];
 
 export default function PlansPage() {
-  const { isActive, isOnTrial, subscriptionId } = useLoaderData();
+  const { isActive, isOnTrial, subscriptionId, subscriptionIsTest, trialEndsAt } = useLoaderData();
   const fetcher = useFetcher();
   const isSubmitting = fetcher.state !== "idle";
   const activeIntent = fetcher.formData?.get("intent");
   const isStarting = isSubmitting && activeIntent === "start";
   const isCancelling = isSubmitting && activeIntent === "cancel";
+  const ctaLabel = isOnTrial
+    ? "Trial Active"
+    : isActive
+      ? "Current Plan"
+      : "Start 7-day free trial";
 
   const handleStart = () => {
     fetcher.submit({ intent: "start" }, { method: "post" });
@@ -88,7 +110,10 @@ export default function PlansPage() {
 
   const handleCancel = () => {
     if (!subscriptionId) return;
-    fetcher.submit({ intent: "cancel", subscriptionId }, { method: "post" });
+    fetcher.submit(
+      { intent: "cancel", subscriptionId, subscriptionIsTest: String(subscriptionIsTest) },
+      { method: "post" },
+    );
   };
 
   return (
@@ -126,7 +151,7 @@ export default function PlansPage() {
               <Text as="p" tone="subdued" variant="bodySm">
                 {isActive
                   ? isOnTrial
-                    ? "You are currently in your free trial."
+                    ? `You are currently in your free trial${trialEndsAt ? ` until ${new Date(trialEndsAt).toLocaleDateString("en-US")}` : ""}.`
                     : "Your subscription is active."
                   : "Includes a 7-day free trial. Cancel anytime."}
               </Text>
@@ -172,7 +197,7 @@ export default function PlansPage() {
                 loading={isStarting}
                 onClick={handleStart}
               >
-                {isActive ? "Current Plan" : "Start 7-day free trial"}
+                {ctaLabel}
               </Button>
             </div>
             {isActive && subscriptionId && (
