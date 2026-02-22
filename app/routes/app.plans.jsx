@@ -201,15 +201,17 @@ export default function PlansPage() {
               </Button>
             </div>
             {isActive && subscriptionId && (
-              <Button
-                fullWidth
-                tone="critical"
-                variant="plain"
-                loading={isCancelling}
-                onClick={handleCancel}
-              >
-                Cancel plan
-              </Button>
+              <div style={{ marginTop: "8px" }}>
+                <Button
+                  fullWidth
+                  tone="critical"
+                  variant="primary"
+                  loading={isCancelling}
+                  onClick={handleCancel}
+                >
+                  Cancel plan
+                </Button>
+              </div>
             )}
           </BlockStack>
         </Card>
