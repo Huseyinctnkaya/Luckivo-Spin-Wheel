@@ -11,18 +11,26 @@ export const links = () => [
   { rel: "stylesheet", href: polarisFixes },
 ];
 
+const getBillingIsTest = () => {
+  const value = process.env.SHOPIFY_BILLING_TEST?.toLowerCase();
+  if (value === "true" || value === "1") return true;
+  if (value === "false" || value === "0") return false;
+  return process.env.NODE_ENV !== "production";
+};
+
 export const loader = async ({ request }) => {
   const { billing } = await authenticate.admin(request);
   const appUrl = process.env.SHOPIFY_APP_URL || new URL(request.url).origin;
+  const isTest = getBillingIsTest();
 
   await billing.require({
     plans: [PLANS.PREMIUM_MONTHLY],
-    isTest: process.env.NODE_ENV !== "production",
+    isTest,
     onFailure: async () =>
       billing.request({
         plan: PLANS.PREMIUM_MONTHLY,
-        isTest: process.env.NODE_ENV !== "production",
-        returnUrl: `${appUrl}/app`,
+        isTest,
+        returnUrl: `${appUrl}/app/plans`,
       }),
   });
 

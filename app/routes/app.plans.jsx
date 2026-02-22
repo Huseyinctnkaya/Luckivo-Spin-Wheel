@@ -4,9 +4,16 @@ import { authenticate } from "../shopify.server";
 import { PLANS } from "../plans";
 import { Page, Card, Text, BlockStack, InlineStack, Button, Badge } from "@shopify/polaris";
 
+const getBillingIsTest = () => {
+  const value = process.env.SHOPIFY_BILLING_TEST?.toLowerCase();
+  if (value === "true" || value === "1") return true;
+  if (value === "false" || value === "0") return false;
+  return process.env.NODE_ENV !== "production";
+};
+
 export const loader = async ({ request }) => {
   const { billing } = await authenticate.admin(request);
-  const defaultIsTest = process.env.NODE_ENV !== "production";
+  const defaultIsTest = getBillingIsTest();
   const checkOptions = [defaultIsTest, !defaultIsTest];
   const billingChecks = await Promise.all(
     checkOptions.map((isTest) =>
@@ -74,7 +81,7 @@ export const action = async ({ request }) => {
 
   await billing.request({
     plan: PLANS.PREMIUM_MONTHLY,
-    isTest: process.env.NODE_ENV !== "production",
+    isTest: getBillingIsTest(),
     returnUrl: `${process.env.SHOPIFY_APP_URL}/app/plans`,
   });
 
