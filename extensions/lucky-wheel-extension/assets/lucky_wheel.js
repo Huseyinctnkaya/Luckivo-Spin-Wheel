@@ -47,6 +47,8 @@
   let countdownCodeEl = null;
   let countdownCloseEl = null;
   let countdownInterval = null;
+  let effectInterval = null;
+  let effectContainer = null;
 
   const POINTER_BORDER_COLOR = "#f1ad46";
   const DEFAULT_WHEEL_TEXT_COLOR = "#4a1e00";
@@ -463,10 +465,23 @@
     applyCountdownStyles();
   }
 
+  function lightenColor(hex, amount) {
+    const match = String(hex || "").trim().match(/^#([0-9a-fA-F]{6})$/);
+    if (!match) return hex;
+    const num = parseInt(match[1], 16);
+    const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+    const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + amount));
+    const b = Math.min(255, Math.max(0, (num & 0xff) + amount));
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+  }
+
   function drawWheel() {
     const segments = getSegments();
     const slices = getSegmentSlices(segments);
     if (!slices.length) return;
+
+    const wheelStyle = getSetting(["wheelStyle"], "default");
+    const isClassic = wheelStyle === "classic";
 
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
@@ -480,14 +495,39 @@
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    slices.forEach(({ segment, start, end }) => {
+    // Classic: alternating decorative outer rim
+    if (isClassic) {
+      slices.forEach(({ start, end }, i) => {
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius + 7, (start * Math.PI) / 180, (end * Math.PI) / 180);
+        ctx.closePath();
+        ctx.fillStyle = i % 2 === 0 ? "#d4af37" : "#7a5c00";
+        ctx.fill();
+      });
+    }
+
+    slices.forEach(({ segment, start, end, mid }) => {
       const startRad = (start * Math.PI) / 180;
       const endRad = (end * Math.PI) / 180;
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.arc(centerX, centerY, radius, startRad, endRad);
       ctx.closePath();
-      ctx.fillStyle = segment.color || "#f6b347";
+
+      if (isClassic) {
+        const midRad = (mid * Math.PI) / 180;
+        const gradX = centerX + radius * 0.35 * Math.cos(midRad);
+        const gradY = centerY + radius * 0.35 * Math.sin(midRad);
+        const grad = ctx.createRadialGradient(gradX, gradY, 0, centerX, centerY, radius);
+        const baseColor = segment.color || "#f6b347";
+        grad.addColorStop(0, lightenColor(baseColor, 45));
+        grad.addColorStop(0.7, baseColor);
+        grad.addColorStop(1, lightenColor(baseColor, -20));
+        ctx.fillStyle = grad;
+      } else {
+        ctx.fillStyle = segment.color || "#f6b347";
+      }
       ctx.fill();
     });
 
@@ -496,16 +536,24 @@
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
       ctx.lineTo(centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle));
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isClassic ? "#d4af37" : "#ffffff";
+      ctx.lineWidth = isClassic ? 2.5 : 2;
       ctx.stroke();
     });
 
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = POINTER_BORDER_COLOR;
-    ctx.lineWidth = 6;
+    ctx.strokeStyle = isClassic ? "#d4af37" : POINTER_BORDER_COLOR;
+    ctx.lineWidth = isClassic ? 7 : 6;
     ctx.stroke();
+
+    if (isClassic) {
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 5, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,0.25)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
 
     slices.forEach(({ segment, mid }) => {
       const angleRad = (mid * Math.PI) / 180;
@@ -528,13 +576,22 @@
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = segmentTextColors[segment.id] || wheelTextColor;
-      ctx.font = `700 ${fontSize}px sans-serif`;
+      ctx.font = isClassic
+        ? `700 ${fontSize}px Georgia, serif`
+        : `700 ${fontSize}px sans-serif`;
+
+      if (isClassic) {
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 3;
+      }
 
       const lineGap = fontSize + 2;
       const startY = lines.length > 1 ? -lineGap / 2 : 0;
       lines.forEach((line, index) => {
         ctx.fillText(line, 0, startY + index * lineGap);
       });
+
+      ctx.shadowBlur = 0;
       ctx.restore();
     });
 
@@ -542,15 +599,34 @@
       wheelSettings.wheelCenterColor || wheelSettings.primaryColor || DEFAULT_CENTER_COLOR;
     ctx.beginPath();
     ctx.arc(centerX, centerY, 46, 0, Math.PI * 2);
-    ctx.fillStyle = centerFill;
+
+    if (isClassic) {
+      const cg = ctx.createRadialGradient(centerX - 8, centerY - 8, 0, centerX, centerY, 46);
+      cg.addColorStop(0, lightenColor(centerFill, 60));
+      cg.addColorStop(0.5, centerFill);
+      cg.addColorStop(1, lightenColor(centerFill, -30));
+      ctx.fillStyle = cg;
+    } else {
+      ctx.fillStyle = centerFill;
+    }
     ctx.fill();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = isClassic ? 5 : 4;
+    ctx.strokeStyle = isClassic ? "#d4af37" : "#ffffff";
     ctx.stroke();
 
+    if (isClassic) {
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 38, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,0.3)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
     const centerFontSize = Math.max(16, Math.round(canvas.width * 0.045));
-    ctx.fillStyle = wheelTextColor;
-    ctx.font = `700 ${centerFontSize}px sans-serif`;
+    ctx.fillStyle = "#ffffff";
+    ctx.font = isClassic
+      ? `700 ${centerFontSize}px Georgia, serif`
+      : `700 ${centerFontSize}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("SPIN", centerX, centerY);
@@ -688,6 +764,102 @@
     }
   }
 
+  function injectEffectStyles() {
+    if (document.getElementById("lw-effect-styles")) return;
+    const style = document.createElement("style");
+    style.id = "lw-effect-styles";
+    style.textContent = `
+      @keyframes lw-fall {
+        0%   { transform: translateY(-40px) rotate(0deg);   opacity: 0.9; }
+        100% { transform: translateY(110vh)  rotate(720deg); opacity: 0;   }
+      }
+      @keyframes lw-float {
+        0%   { transform: translateY(110vh) rotate(0deg);    opacity: 0;   }
+        15%  { opacity: 0.8; }
+        85%  { opacity: 0.8; }
+        100% { transform: translateY(-10vh) rotate(-360deg); opacity: 0;   }
+      }
+      .lw-effect--halloween-dark .lucky-wheel-modal {
+        background: linear-gradient(135deg, #1a0a2e 0%, #2d1b4e 100%) !important;
+        box-shadow: 0 0 48px rgba(150,0,255,0.45) !important;
+      }
+      .lw-effect--halloween-dark .lucky-wheel-modal * {
+        color: #e8d0ff !important;
+      }
+      .lw-effect--halloween-dark .lucky-wheel-modal button {
+        color: #ffffff !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function spawnParticle(emojis, container, animName, duration) {
+    const el = document.createElement("span");
+    el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    const size = 14 + Math.random() * 18;
+    el.style.cssText = [
+      "position:fixed",
+      `left:${Math.random() * 100}vw`,
+      `font-size:${size}px`,
+      `animation:${animName} ${(duration + Math.random() * 2).toFixed(1)}s linear forwards`,
+      "pointer-events:none",
+      "z-index:99999",
+      animName === "lw-fall" ? "top:-40px" : "bottom:-40px",
+    ].join(";");
+    container.appendChild(el);
+    setTimeout(() => el.remove(), (duration + 3) * 1000);
+  }
+
+  function stopEffect() {
+    if (effectInterval) {
+      clearInterval(effectInterval);
+      effectInterval = null;
+    }
+    if (effectContainer) {
+      effectContainer.remove();
+      effectContainer = null;
+    }
+    if (overlay) {
+      overlay.classList.remove("lw-effect--halloween-dark");
+    }
+  }
+
+  function startEffect() {
+    stopEffect();
+    const effect = getSetting(["effect"], "default");
+    if (effect === "default") return;
+
+    injectEffectStyles();
+
+    effectContainer = document.createElement("div");
+    effectContainer.style.cssText =
+      "position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99998;overflow:hidden;";
+    document.body.appendChild(effectContainer);
+
+    if (effect === "valentine_falling_hearts") {
+      const hearts = ["❤️", "💕", "💖", "💗", "💝", "🌹", "💘"];
+      effectInterval = setInterval(() => {
+        if (overlay.style.display !== "flex") return;
+        spawnParticle(hearts, effectContainer, "lw-fall", 3.5);
+      }, 350);
+
+    } else if (effect === "halloween_dark") {
+      overlay.classList.add("lw-effect--halloween-dark");
+      const spooks = ["🦇", "🕷️", "💀", "🎃", "🕸️", "👻"];
+      effectInterval = setInterval(() => {
+        if (overlay.style.display !== "flex") return;
+        spawnParticle(spooks, effectContainer, "lw-float", 5);
+      }, 500);
+
+    } else if (effect === "halloween_light") {
+      const items = ["🎃", "🍂", "🌙", "⭐", "🦉", "🍁", "🌟"];
+      effectInterval = setInterval(() => {
+        if (overlay.style.display !== "flex") return;
+        spawnParticle(items, effectContainer, "lw-fall", 4);
+      }, 400);
+    }
+  }
+
   function getCountdownDurationMs() {
     const expiration = getSetting(["discountCodeExpiration"], "never");
     if (expiration === "in_24_hours") return 24 * 60 * 60 * 1000;
@@ -783,6 +955,7 @@
 
     resetPopupView();
     overlay.style.display = "flex";
+    startEffect();
     updateSideTriggerVisibility();
 
     if (wheelConfig?.id) {
@@ -794,6 +967,7 @@
 
   function closePopup() {
     overlay.style.display = "none";
+    stopEffect();
     updateSideTriggerVisibility();
   }
 
@@ -949,16 +1123,18 @@
     }
 
     if (triggerCondition === "after_delay") {
-      setTimeout(() => openPopup(), 3000);
+      const delaySec = Math.max(0.5, parseFloat(getSetting(["delaySeconds"], "3")) || 3);
+      setTimeout(() => openPopup(), delaySec * 1000);
       return;
     }
 
     if (triggerCondition === "after_scroll") {
+      const threshold = Math.min(1, Math.max(0.01, (parseFloat(getSetting(["scrollThreshold"], "50")) || 50) / 100));
       const onScroll = () => {
         const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
         if (maxScroll <= 0) return;
         const ratio = window.scrollY / maxScroll;
-        if (ratio >= 0.35) {
+        if (ratio >= threshold) {
           window.removeEventListener("scroll", onScroll);
           openPopup();
         }
