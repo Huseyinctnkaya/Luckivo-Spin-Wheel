@@ -1129,15 +1129,26 @@ export default function WheelEditor() {
   const handleApplyCombinesToAll = () => {
     if (!discountDraft) return;
 
+    setDiscountDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            combineOrderDiscounts: true,
+            combineProductDiscounts: true,
+            combineShippingDiscounts: true,
+          }
+        : prev,
+    );
+
     setConfig((prev) => {
       const nextDiscountSettings = { ...(prev.discountSettings || {}) };
       segments.forEach((segment) => {
         const existing = nextDiscountSettings[segment.id] || {};
         nextDiscountSettings[segment.id] = {
           ...existing,
-          combineOrderDiscounts: discountDraft.combineOrderDiscounts,
-          combineProductDiscounts: discountDraft.combineProductDiscounts,
-          combineShippingDiscounts: discountDraft.combineShippingDiscounts,
+          combineOrderDiscounts: true,
+          combineProductDiscounts: true,
+          combineShippingDiscounts: true,
         };
       });
       return { ...prev, discountSettings: nextDiscountSettings };
