@@ -56,9 +56,21 @@ const POPUP_BEHAVIOR_OPTIONS = [
 
 const TRIGGER_CONDITION_OPTIONS = [
   { label: "Show immediately", value: "show_immediately" },
-  { label: "After delay", value: "after_delay" },
+  { label: "After a delay", value: "after_delay" },
   { label: "On exit intent", value: "on_exit_intent" },
-  { label: "After scroll", value: "after_scroll" },
+  { label: "After user scrolls", value: "after_scroll" },
+];
+
+const DELAY_BEFORE_SHOWING_OPTIONS = [
+  { label: "1 second", value: "1" },
+  { label: "2 seconds", value: "2" },
+  { label: "3 seconds", value: "3" },
+  { label: "5 seconds", value: "5" },
+  { label: "7 seconds", value: "7" },
+  { label: "10 seconds", value: "10" },
+  { label: "15 seconds", value: "15" },
+  { label: "20 seconds", value: "20" },
+  { label: "30 seconds", value: "30" },
 ];
 
 const DISPLAY_ON_OPTIONS = [
@@ -517,6 +529,12 @@ export default function WheelEditor() {
       parsedConfig.triggerCondition,
       "show_immediately",
     ),
+    delaySeconds: getValidOptionValue(
+      DELAY_BEFORE_SHOWING_OPTIONS,
+      String(parsedConfig.delaySeconds ?? "3"),
+      "3",
+    ),
+    scrollThreshold: String(parsedConfig.scrollThreshold ?? "50"),
     displayOn: getValidOptionValue(
       DISPLAY_ON_OPTIONS,
       parsedConfig.displayOn,
@@ -1887,6 +1905,30 @@ export default function WheelEditor() {
                       value={config.triggerCondition}
                       onChange={(value) => handleConfigChange("triggerCondition", value)}
                     />
+                    {config.triggerCondition === "after_delay" && (
+                      <Select
+                        label="Delay before showing"
+                        options={DELAY_BEFORE_SHOWING_OPTIONS}
+                        value={config.delaySeconds}
+                        onChange={(value) => handleConfigChange("delaySeconds", value)}
+                      />
+                    )}
+                    {config.triggerCondition === "after_scroll" && (
+                      <TextField
+                        label="Scroll threshold"
+                        type="number"
+                        value={config.scrollThreshold}
+                        onChange={(value) => handleConfigChange("scrollThreshold", value)}
+                        suffix="%"
+                        min={1}
+                        max={100}
+                      />
+                    )}
+                    {config.triggerCondition === "on_exit_intent" && (
+                      <Banner tone="info">
+                        Exit-intent is only supported on desktop. The popup will appear when the user moves their mouse toward the browser toolbar or close button.
+                      </Banner>
+                    )}
                     <Select
                       label="Display on"
                       options={DISPLAY_ON_OPTIONS}
