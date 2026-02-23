@@ -14,6 +14,25 @@ function toBoolean(value, fallback = false) {
     return fallback;
 }
 
+function parseWheelSettings(rawConfig) {
+    try {
+        const parsed = JSON.parse(rawConfig || "{}");
+        return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function isNoRewardResult({ label, couponCode }) {
+    const normalizedCode = String(couponCode || "").trim().toUpperCase();
+    const noRewardCode =
+        !normalizedCode ||
+        normalizedCode === "NONE" ||
+        normalizedCode === "NO_DISCOUNT";
+    const noRewardLabel = /try\s*again|no\s*luck/i.test(String(label || ""));
+    return noRewardCode || noRewardLabel;
+}
+
 export const loader = async ({ request }) => {
     try {
         const noStoreHeaders = {
@@ -74,12 +93,7 @@ export const action = async ({ request }) => {
                 return json({ error: "Wheel not found for this shop" }, { status: 404 });
             }
 
-            let wheelSettings = {};
-            try {
-                wheelSettings = JSON.parse(wheel.config || "{}");
-            } catch {
-                wheelSettings = {};
-            }
+            const wheelSettings = parseWheelSettings(wheel.config);
 
             const syncToShopifyCustomers = toBoolean(wheelSettings.syncToShopifyCustomers, false);
             const rawEmail = String(email || "").trim();
@@ -89,7 +103,7 @@ export const action = async ({ request }) => {
             const result = calculateSpinResult(wheel.segments);
 
             // Create spin record
-            await db.spin.create({
+            const spinRecord = await db.spin.create({
                 data: {
                     wheelId: wheel.id,
                     customerEmail: normalizedEmail || rawEmail || null,
@@ -116,10 +130,10 @@ export const action = async ({ request }) => {
                 }
             }
 
-            const isNoReward = !result.value ||
-                result.value.trim().toUpperCase() === "NONE" ||
-                result.value.trim().toUpperCase() === "NO_DISCOUNT" ||
-                /try\s*again|no\s*luck/i.test(result.label || "");
+            const isNoReward = isNoRewardResult({
+                label: result.label,
+                couponCode: result.value,
+            });
 
             if (normalizedEmail && !isNoReward) {
                 try {
@@ -150,9 +164,112 @@ export const action = async ({ request }) => {
             }
 
             return json({
+                spinId: spinRecord.id,
                 segmentId: result.id,
                 label: result.label,
                 couponCode: result.value
+            });
+        }
+
+        if (pathname.endsWith("/finalize-spin")) {
+            const body = await request.json();
+            const spinId = String(body?.spinId || "").trim();
+            const wheelId = String(body?.wheelId || "").trim();
+
+            if (!spinId || !wheelId) {
+                return json({ error: "Missing spinId or wheelId" }, { status: 400 });
+            }
+
+            const spin = await db.spin.findUnique({
+                where: { id: spinId },
+                include: {
+                    wheel: {
+                        select: {
+                            id: true,
+                            shop: true,
+                            config: true,
+                        },
+                    },
+                },
+            });
+
+            if (!spin || spin.wheelId !== wheelId || spin.wheel?.shop !== session.shop) {
+                return json({ error: "Spin not found for this shop" }, { status: 404 });
+            }
+
+            const wheelSettings = parseWheelSettings(spin.wheel?.config);
+            const syncToShopifyCustomers = toBoolean(wheelSettings.syncToShopifyCustomers, false);
+            const rawEmail = String(body?.email || "").trim();
+            const normalizedEmail = rawEmail.toLowerCase();
+            const rawName = String(body?.name || "").trim();
+            const rawPhone = String(body?.phone || "").trim();
+            const consentAccepted = toBoolean(body?.consentAccepted, false);
+
+            const previousEmail = String(spin.customerEmail || "").trim().toLowerCase();
+            const shouldUpdateSpinEmail = Boolean(normalizedEmail) && previousEmail !== normalizedEmail;
+
+            if (shouldUpdateSpinEmail) {
+                await db.spin.update({
+                    where: { id: spin.id },
+                    data: {
+                        customerEmail: normalizedEmail,
+                    },
+                });
+            }
+
+            if (syncToShopifyCustomers && normalizedEmail) {
+                try {
+                    await syncSpinCustomerToShopify({
+                        shop: session.shop,
+                        email: normalizedEmail,
+                        name: rawName,
+                        phone: rawPhone,
+                        consentAccepted,
+                    });
+                } catch (syncError) {
+                    console.error("Customer sync failed:", syncError);
+                }
+            }
+
+            const isNoReward = isNoRewardResult({
+                label: spin.result,
+                couponCode: spin.couponCode,
+            });
+            const shouldSendEmail = Boolean(normalizedEmail) && !isNoReward && previousEmail !== normalizedEmail;
+
+            if (shouldSendEmail) {
+                try {
+                    const emailSettings = await db.emailSettings.findUnique({
+                        where: { shop: session.shop },
+                    });
+
+                    if (emailSettings?.enabled) {
+                        await sendDiscountEmail({
+                            to: normalizedEmail,
+                            couponCode: spin.couponCode || "",
+                            reward: spin.result,
+                            shopName: session.shop.replace(".myshopify.com", ""),
+                            fromEmail: emailSettings.fromEmail || undefined,
+                            fromName: emailSettings.fromName || undefined,
+                            subject: emailSettings.subject || undefined,
+                            headerTitle: emailSettings.headerTitle || undefined,
+                            headerSubtitle: emailSettings.headerSubtitle || undefined,
+                            headerEmoji: emailSettings.headerEmoji || undefined,
+                            brandColor: emailSettings.brandColor || undefined,
+                            ctaText: emailSettings.ctaText || undefined,
+                            ctaUrl: emailSettings.ctaUrl || undefined,
+                        });
+                    }
+                } catch (emailError) {
+                    console.error("Email send failed:", emailError);
+                }
+            }
+
+            return json({
+                success: true,
+                spinId: spin.id,
+                label: spin.result,
+                couponCode: spin.couponCode || "",
             });
         }
 

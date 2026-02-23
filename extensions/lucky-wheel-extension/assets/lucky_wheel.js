@@ -49,6 +49,9 @@
   let countdownInterval = null;
   let effectInterval = null;
   let effectContainer = null;
+  let pendingSpinResult = null;
+  let pendingSpinId = "";
+  let awaitingPostSpinDetails = false;
 
   const POINTER_BORDER_COLOR = "#f1ad46";
   const DEFAULT_WHEEL_TEXT_COLOR = "#4a1e00";
@@ -87,6 +90,76 @@
       if (["false", "0", "no", "off", ""].includes(normalized)) return false;
     }
     return fallback;
+  }
+
+  function getPopupBehavior() {
+    const behavior = String(getSetting(["popupBehavior"], "default") || "")
+      .trim()
+      .toLowerCase();
+    if (behavior === "email_first" || behavior === "spin_first") return behavior;
+    return "default";
+  }
+
+  function getFormStepConfig({ popupBehavior = getPopupBehavior(), postSpinStep = false } = {}) {
+    const disableAll = toBoolean(getSetting(["disableAllFormFields"], false), false);
+
+    if (popupBehavior === "spin_first" && !postSpinStep) {
+      return {
+        showName: false,
+        showEmail: false,
+        showPhone: false,
+        showConsent: false,
+        showInfoText: false,
+        requireName: false,
+        requireEmail: false,
+        requirePhone: false,
+        requireConsent: false,
+      };
+    }
+
+    if (popupBehavior === "email_first") {
+      return {
+        showName: false,
+        showEmail: true,
+        showPhone: false,
+        showConsent: false,
+        showInfoText: true,
+        requireName: false,
+        requireEmail: true,
+        requirePhone: false,
+        requireConsent: false,
+      };
+    }
+
+    const showName = !disableAll && toBoolean(getSetting(["showNameField"], false), false);
+    const showEmail = !disableAll && toBoolean(getSetting(["showEmailField"], true), true);
+    const showPhone = !disableAll && toBoolean(getSetting(["showPhoneField"], false), false);
+    const showConsent = !disableAll && toBoolean(getSetting(["showConsentCheckbox"], false), false);
+
+    return {
+      showName,
+      showEmail,
+      showPhone,
+      showConsent,
+      showInfoText: true,
+      requireName: showName && getSetting(["nameFieldRequirement"], "required") === "required",
+      requireEmail: showEmail && getSetting(["emailFieldRequirement"], "required") === "required",
+      requirePhone: showPhone && getSetting(["phoneFieldRequirement"], "required") === "required",
+      requireConsent: showConsent,
+    };
+  }
+
+  function hasSpinFirstFormStep() {
+    const formStep = getFormStepConfig({ popupBehavior: "spin_first", postSpinStep: true });
+    return formStep.showName || formStep.showEmail || formStep.showPhone || formStep.showConsent;
+  }
+
+  function getDefaultSpinButtonLabel() {
+    return getSetting(["initialCtaText", "ctaText"], "SPIN NOW");
+  }
+
+  function getPostSpinButtonLabel() {
+    return "Reveal Reward";
   }
 
   function getSegments() {
@@ -351,51 +424,38 @@
   }
 
   function applyFormFieldSettings() {
-    const popupBehavior = getSetting(["popupBehavior"], "default");
-    const spinFirstMode = popupBehavior === "spin_first";
-    const disableAll = toBoolean(getSetting(["disableAllFormFields"], false), false);
-
-    const showName = !disableAll && toBoolean(getSetting(["showNameField"], false), false);
-    const showEmailByConfig = toBoolean(getSetting(["showEmailField"], true), true);
-    const showPhone = !disableAll && toBoolean(getSetting(["showPhoneField"], false), false);
-    const showConsent = !disableAll && toBoolean(getSetting(["showConsentCheckbox"], false), false);
-
-    const shouldShowInputs = !spinFirstMode;
-    const showEmail = shouldShowInputs && (!disableAll && showEmailByConfig);
+    const popupBehavior = getPopupBehavior();
+    const formStep = getFormStepConfig({
+      popupBehavior,
+      postSpinStep: awaitingPostSpinDetails,
+    });
 
     if (nameInput) {
       nameInput.placeholder = getSetting(["initialNamePlaceholder"], "Enter your name");
-      nameInput.style.display = showName && shouldShowInputs ? "" : "none";
-      nameInput.required =
-        showName &&
-        shouldShowInputs &&
-        getSetting(["nameFieldRequirement"], "required") === "required";
+      nameInput.style.display = formStep.showName ? "" : "none";
+      nameInput.required = formStep.requireName;
     }
 
     emailInput.placeholder = getSetting(
       ["initialEmailPlaceholder", "emailPlaceholder"],
       "Enter your email",
     );
-    emailInput.style.display = showEmail ? "" : "none";
-    emailInput.required =
-      showEmail && getSetting(["emailFieldRequirement"], "required") === "required";
+    emailInput.style.display = formStep.showEmail ? "" : "none";
+    emailInput.required = formStep.requireEmail;
 
     if (phoneInput) {
       phoneInput.placeholder = getSetting(["initialPhonePlaceholder"], "Enter your phone number");
-      phoneInput.style.display = showPhone && shouldShowInputs ? "" : "none";
-      phoneInput.required =
-        showPhone &&
-        shouldShowInputs &&
-        getSetting(["phoneFieldRequirement"], "required") === "required";
+      phoneInput.style.display = formStep.showPhone ? "" : "none";
+      phoneInput.required = formStep.requirePhone;
     }
 
     if (consentRowEl && consentCheckbox) {
-      consentRowEl.style.display = showConsent && shouldShowInputs ? "flex" : "none";
-      consentCheckbox.required = showConsent && shouldShowInputs;
+      consentRowEl.style.display = formStep.showConsent ? "flex" : "none";
+      consentCheckbox.required = formStep.requireConsent;
     }
 
     if (infoTextEl) {
-      infoTextEl.style.display = shouldShowInputs ? "" : "none";
+      infoTextEl.style.display = formStep.showInfoText ? "" : "none";
     }
   }
 
@@ -942,11 +1002,15 @@
   }
 
   function resetPopupView() {
+    awaitingPostSpinDetails = false;
+    pendingSpinResult = null;
+    pendingSpinId = "";
     setInitialContentVisibility(true);
     if (form) form.style.display = "flex";
     if (resultDiv) resultDiv.style.display = "none";
     clearFormError();
     resetSpinUi();
+    applyFormFieldSettings();
   }
 
   function openPopup(options = {}) {
@@ -980,33 +1044,28 @@
     };
   }
 
-  function validateFormBeforeSpin() {
-    if (!isSpinAllowed(true)) return false;
+  function getPayloadForStep({ popupBehavior = getPopupBehavior(), postSpinStep = false } = {}) {
+    const payload = getFormPayload();
+    const formStep = getFormStepConfig({ popupBehavior, postSpinStep });
+    return {
+      name: formStep.showName ? payload.name : "",
+      email: formStep.showEmail ? payload.email : "",
+      phone: formStep.showPhone ? payload.phone : "",
+      consentAccepted: formStep.showConsent ? payload.consentAccepted : false,
+    };
+  }
 
-    const popupBehavior = getSetting(["popupBehavior"], "default");
-    const spinFirstMode = popupBehavior === "spin_first";
-    if (spinFirstMode) return true;
-
-    const disableAll = toBoolean(getSetting(["disableAllFormFields"], false), false);
-    if (disableAll) return true;
-
-    const showName = toBoolean(getSetting(["showNameField"], false), false);
-    const showEmailByConfig = toBoolean(getSetting(["showEmailField"], true), true);
-    const showPhone = toBoolean(getSetting(["showPhoneField"], false), false);
-    const showConsent = toBoolean(getSetting(["showConsentCheckbox"], false), false);
-    const shouldShowInputs = !spinFirstMode;
-    const showEmail = shouldShowInputs && (!disableAll && showEmailByConfig);
-
+  function validateVisibleFormFields({ popupBehavior = getPopupBehavior(), postSpinStep = false } = {}) {
     const { name, email, phone, consentAccepted } = getFormPayload();
+    const formStep = getFormStepConfig({ popupBehavior, postSpinStep });
 
-    if (!disableAll && showName && getSetting(["nameFieldRequirement"], "required") === "required" && !name) {
+    if (formStep.showName && formStep.requireName && !name) {
       setFormError("Please enter your name");
       return false;
     }
 
-    if (showEmail) {
-      const emailRequired = getSetting(["emailFieldRequirement"], "required") === "required";
-      if (emailRequired && !email) {
+    if (formStep.showEmail) {
+      if (formStep.requireEmail && !email) {
         setFormError(getSetting(["errorEmailInvalid"], "Please enter a valid email address"));
         return false;
       }
@@ -1016,18 +1075,12 @@
       }
     }
 
-    if (
-      !disableAll &&
-      showPhone &&
-      shouldShowInputs &&
-      getSetting(["phoneFieldRequirement"], "required") === "required" &&
-      !phone
-    ) {
+    if (formStep.showPhone && formStep.requirePhone && !phone) {
       setFormError("Please enter your phone number");
       return false;
     }
 
-    if (!disableAll && showConsent && shouldShowInputs && !consentAccepted) {
+    if (formStep.showConsent && formStep.requireConsent && !consentAccepted) {
       setFormError("Please accept the consent checkbox");
       return false;
     }
@@ -1036,10 +1089,30 @@
     return true;
   }
 
+  function validateFormBeforeSpin() {
+    if (!isSpinAllowed(true)) return false;
+
+    const popupBehavior = getPopupBehavior();
+    if (popupBehavior === "spin_first") {
+      clearFormError();
+      return true;
+    }
+    return validateVisibleFormFields({ popupBehavior, postSpinStep: false });
+  }
+
+  function validatePostSpinForm() {
+    return validateVisibleFormFields({
+      popupBehavior: "spin_first",
+      postSpinStep: true,
+    });
+  }
+
   function resetSpinUi() {
     isSpinning = false;
     spinBtn.disabled = false;
-    spinBtn.textContent = getSetting(["initialCtaText", "ctaText"], "SPIN NOW");
+    spinBtn.textContent = awaitingPostSpinDetails
+      ? getPostSpinButtonLabel()
+      : getDefaultSpinButtonLabel();
   }
 
   function showResult(result) {
@@ -1105,6 +1178,86 @@
     }
 
     applyThemeFromSettings();
+  }
+
+  async function readJsonResponse(response, fallbackMessage) {
+    const contentType = response.headers.get("content-type") || "";
+    if (!response.ok || !contentType.includes("application/json")) {
+      const body = await response.text();
+      throw new Error(`${fallbackMessage} (${response.status}): ${body.slice(0, 180)}`);
+    }
+    return response.json();
+  }
+
+  function enterSpinFirstFormStep(result) {
+    pendingSpinResult = result;
+    pendingSpinId = String(result?.spinId || "").trim();
+    awaitingPostSpinDetails = true;
+
+    clearFormError();
+    setInitialContentVisibility(true);
+    if (form) form.style.display = "flex";
+    if (resultDiv) resultDiv.style.display = "none";
+    applyFormFieldSettings();
+    resetSpinUi();
+  }
+
+  async function finalizeSpinAfterForm() {
+    if (!pendingSpinResult || !pendingSpinId || !wheelConfig?.id) {
+      awaitingPostSpinDetails = false;
+      pendingSpinResult = null;
+      pendingSpinId = "";
+      setFormError(getSetting(["errorTryAgainLater"], "Please try again later when you are eligible."));
+      resetSpinUi();
+      return;
+    }
+
+    if (!validatePostSpinForm()) return;
+
+    const payload = getPayloadForStep({ popupBehavior: "spin_first", postSpinStep: true });
+
+    isSpinning = true;
+    spinBtn.disabled = true;
+    spinBtn.textContent = "SAVING...";
+
+    try {
+      const response = await fetch(`${proxyUrl}/finalize-spin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wheelId: wheelConfig.id,
+          spinId: pendingSpinId,
+          email: payload.email,
+          name: payload.name,
+          phone: payload.phone,
+          consentAccepted: payload.consentAccepted,
+        }),
+      });
+
+      const finalized = await readJsonResponse(response, "Finalize spin failed");
+      if (finalized.error) {
+        setFormError(finalized.error);
+        resetSpinUi();
+        return;
+      }
+
+      const finalResult = {
+        ...pendingSpinResult,
+        label: finalized.label || pendingSpinResult.label,
+        couponCode: finalized.couponCode ?? pendingSpinResult.couponCode,
+      };
+
+      awaitingPostSpinDetails = false;
+      pendingSpinResult = null;
+      pendingSpinId = "";
+      showResult(finalResult);
+      resetSpinUi();
+      updateSideTriggerVisibility();
+    } catch (error) {
+      console.error("Finalize spin failed:", error);
+      setFormError(getSetting(["errorTryAgainLater"], "Please try again later when you are eligible."));
+      resetSpinUi();
+    }
   }
 
   function setupPopupTriggers() {
@@ -1213,9 +1366,16 @@
 
   async function handleSpin() {
     if (isSpinning || !wheelConfig) return;
+    const popupBehavior = getPopupBehavior();
+
+    if (popupBehavior === "spin_first" && awaitingPostSpinDetails) {
+      await finalizeSpinAfterForm();
+      return;
+    }
+
     if (!validateFormBeforeSpin()) return;
 
-    const payload = getFormPayload();
+    const payload = getPayloadForStep({ popupBehavior, postSpinStep: false });
     clearFormError();
 
     isSpinning = true;
@@ -1235,13 +1395,7 @@
         }),
       });
 
-      const contentType = response.headers.get("content-type") || "";
-      if (!response.ok || !contentType.includes("application/json")) {
-        const body = await response.text();
-        throw new Error(`Spin failed (${response.status}): ${body.slice(0, 180)}`);
-      }
-
-      const result = await response.json();
+      const result = await readJsonResponse(response, "Spin failed");
       if (result.error) {
         setFormError(result.error);
         resetSpinUi();
@@ -1253,7 +1407,17 @@
       canvas.style.transform = `rotate(${currentRotation}deg)`;
 
       setTimeout(() => {
-        showResult(result);
+        const shouldUseSpinFirstStep =
+          popupBehavior === "spin_first" &&
+          hasSpinFirstFormStep() &&
+          String(result?.spinId || "").trim();
+
+        if (shouldUseSpinFirstStep) {
+          enterSpinFirstFormStep(result);
+        } else {
+          showResult(result);
+          resetSpinUi();
+        }
         isSpinning = false;
         markSpinPerformed();
         updateSideTriggerVisibility();

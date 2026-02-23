@@ -1089,17 +1089,17 @@ export default function WheelEditor() {
   const showTopLogo =
     Boolean(config.logoImageUrl) &&
     (config.logoPosition === "top_of_popup" || config.logoPosition === "both");
-  const spinFirstMode = config.popupBehavior === "spin_first";
+  const popupBehavior = config.popupBehavior || "default";
+  const spinFirstMode = popupBehavior === "spin_first";
+  const emailFirstMode = popupBehavior === "email_first";
   const disableAllFields = toBoolean(config.disableAllFormFields, false);
-  const shouldShowFormInputs = !spinFirstMode;
   const showEmailByConfig = toBoolean(config.showEmailField, true);
-  const showNameInput =
-    shouldShowFormInputs && !disableAllFields && toBoolean(config.showNameField, false);
+  const showNameInput = !spinFirstMode && !emailFirstMode && !disableAllFields && toBoolean(config.showNameField, false);
   const showEmailInput =
-    shouldShowFormInputs && (!disableAllFields && showEmailByConfig);
-  const showPhoneInput =
-    shouldShowFormInputs && !disableAllFields && toBoolean(config.showPhoneField, false);
-  const showInfoText = shouldShowFormInputs;
+    !spinFirstMode &&
+    (emailFirstMode || (!disableAllFields && showEmailByConfig));
+  const showPhoneInput = !spinFirstMode && !emailFirstMode && !disableAllFields && toBoolean(config.showPhoneField, false);
+  const showInfoText = !spinFirstMode;
   const previewResultSegment = segments[0] || null;
   const previewResultCode = buildPreviewRewardCode(previewResultSegment);
   const previewSideButtonText = config.sideTriggerButtonText || "💫 Get Discount";
