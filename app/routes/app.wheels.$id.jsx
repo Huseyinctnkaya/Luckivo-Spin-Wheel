@@ -188,15 +188,29 @@ function buildWheelGradient(segments) {
     return sum + (Number.isFinite(probability) ? probability : 0);
   }, 0);
 
+  // When total > 0, exclude zero-probability segments from the gradient
+  const visibleSegments = total > 0
+    ? segments.filter((s) => Number(s.probability || 0) > 0)
+    : segments;
+
+  if (visibleSegments.length === 0) {
+    return "conic-gradient(#f3f3f3 0deg 360deg)";
+  }
+
+  const visibleTotal = visibleSegments.reduce((sum, s) => {
+    const p = Number(s.probability || 0);
+    return sum + (Number.isFinite(p) ? p : 0);
+  }, 0);
+
   const parts = [];
   let cursor = 0;
 
-  segments.forEach((segment) => {
+  visibleSegments.forEach((segment) => {
     const probability = Number(segment.probability || 0);
     const ratio =
-      total > 0
-        ? probability / total
-        : 1 / segments.length;
+      visibleTotal > 0
+        ? probability / visibleTotal
+        : 1 / visibleSegments.length;
     const next = cursor + ratio * 360;
     const color = normalizeHex(segment.color, "#ffcc80");
     parts.push(`${color} ${cursor}deg ${next}deg`);
@@ -674,10 +688,22 @@ export default function WheelEditor() {
       return sum + (Number.isFinite(probability) ? probability : 0);
     }, 0);
 
+    // Only show labels for segments that are visible on the wheel
+    const visibleSegments = total > 0
+      ? segments.filter((s) => Number(s.probability || 0) > 0)
+      : segments;
+
+    if (!visibleSegments.length) return [];
+
+    const visibleTotal = visibleSegments.reduce((sum, s) => {
+      const p = Number(s.probability || 0);
+      return sum + (Number.isFinite(p) ? p : 0);
+    }, 0);
+
     let cursor = 0;
-    return segments.map((segment) => {
+    return visibleSegments.map((segment) => {
       const probability = Number(segment.probability || 0);
-      const ratio = total > 0 ? probability / total : 1 / segments.length;
+      const ratio = visibleTotal > 0 ? probability / visibleTotal : 1 / visibleSegments.length;
       const sweep = ratio * 360;
       const midAngle = cursor + sweep / 2;
       cursor += sweep;
@@ -827,11 +853,16 @@ export default function WheelEditor() {
   };
 
   const handleAddDiscountItem = () => {
+    const existingTotal = segments.reduce((sum, s) => sum + parseFloat(s.probability || 0), 0);
+    const defaultProbability = segments.length > 0
+      ? Math.max(1, Math.round(existingTotal / segments.length))
+      : 10;
+
     const newSegment = {
       id: createSegmentId(),
       label: "New item",
       value: "Discount item",
-      probability: 0,
+      probability: defaultProbability,
       color: "#f6b347",
     };
 
@@ -869,7 +900,7 @@ export default function WheelEditor() {
       discountType: "percentage",
       discountAmount: "10",
       minimumPurchase: "0",
-      probabilityWeight: "0",
+      probabilityWeight: String(defaultProbability),
       limitPrizeWins: false,
       maximumWinners: "10",
       currentWinners: "0",
