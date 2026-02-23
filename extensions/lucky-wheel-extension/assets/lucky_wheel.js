@@ -480,7 +480,7 @@
     const slices = getSegmentSlices(segments);
     if (!slices.length) return;
 
-    const wheelStyle = getSetting(["wheelStyle"], "default");
+    const wheelStyle = getSetting(["style", "wheelStyle"], "default");
     const isClassic = wheelStyle === "classic";
 
     const centerX = canvas.width / 2;
