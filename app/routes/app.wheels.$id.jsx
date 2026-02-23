@@ -1823,21 +1823,6 @@ export default function WheelEditor() {
                   autoComplete="off"
                 />
 
-                <InlineGrid columns={2} gap="300">
-                  <Select
-                    label="Wheel style"
-                    options={WHEEL_STYLE_OPTIONS}
-                    value={config.style}
-                    onChange={(value) => handleConfigChange("style", value)}
-                  />
-                  <Select
-                    label="Effect"
-                    options={EFFECT_OPTIONS}
-                    value={config.effect}
-                    onChange={(value) => handleConfigChange("effect", value)}
-                  />
-                </InlineGrid>
-
                 <Select
                   label="Popup behavior"
                   options={POPUP_BEHAVIOR_OPTIONS}
