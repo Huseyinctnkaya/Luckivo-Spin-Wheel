@@ -110,16 +110,21 @@ export async function sendDiscountEmail({
   const { Resend } = await import("resend");
   const resend = new Resend(process.env.RESEND_API_KEY);
 
-  const safeFrom = fromEmail && fromName
-    ? `${fromName} <${fromEmail}>`
-    : fromEmail || "Luckivo <onboarding@resend.dev>";
+  const senderName = fromName || "Luckivo Spin Wheel";
+  const safeFrom = `${senderName} <noreply@luckivo.app>`;
+  const safeReplyTo = fromEmail || undefined;
 
   const safeSubject = subject || "🎁 Your discount code is here!";
 
-  const { data, error } = await resend.emails.send({
+  const sendPayload = {
     from: safeFrom,
     to: [to],
     subject: safeSubject,
+  };
+  if (safeReplyTo) sendPayload.reply_to = safeReplyTo;
+
+  const { data, error } = await resend.emails.send({
+    ...sendPayload,
     html: buildDiscountEmailHtml({
       couponCode,
       reward,

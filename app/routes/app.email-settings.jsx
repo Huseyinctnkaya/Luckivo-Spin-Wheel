@@ -313,13 +313,13 @@ export default function EmailSettingsPage() {
                         helpText="Name shown as the sender in the inbox"
                       />
                       <TextField
-                        label="From email"
+                        label="Reply-To email"
                         value={fromEmail}
                         onChange={setFromEmail}
                         autoComplete="off"
                         type="email"
                         placeholder="hello@yourdomain.com"
-                        helpText="Must be a verified domain in Resend"
+                        helpText="Customers who reply to the email will reach this address"
                       />
                       <TextField
                         label="Email subject"
@@ -332,10 +332,10 @@ export default function EmailSettingsPage() {
 
                     <Box background="bg-surface-secondary" borderRadius="200" padding="300">
                       <BlockStack gap="100">
-                        <Text as="p" variant="bodySm" fontWeight="semibold">Important</Text>
+                        <Text as="p" variant="bodySm" fontWeight="semibold">How it works</Text>
                         <Text as="p" variant="bodySm" tone="subdued">
-                          For testing, leave the from email empty — emails will be sent from <strong>onboarding@resend.dev</strong>.
-                          For production, verify your domain at <strong>resend.com/domains</strong> and enter it above.
+                          Emails are sent from <strong>noreply@luckivo.app</strong> on your behalf — no setup required.
+                          If you enter a Reply-To email, customers who reply will reach that address directly.
                         </Text>
                       </BlockStack>
                     </Box>
