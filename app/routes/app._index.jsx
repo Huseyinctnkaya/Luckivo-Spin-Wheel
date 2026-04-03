@@ -318,11 +318,16 @@ export default function Index() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <Text variant="bodyMd" fontWeight="semibold">
-                {trialDaysRemaining === 1
-                  ? "Your free trial ends tomorrow"
-                  : `${trialDaysRemaining} days left in your free trial`}
-              </Text>
+              <div>
+                <Text variant="bodyMd" fontWeight="semibold">
+                  {trialDaysRemaining === 1
+                    ? "Your free trial ends tomorrow"
+                    : `${trialDaysRemaining} days left in your free trial`}
+                </Text>
+                <Text variant="bodySm" tone="subdued">
+                  Your 7-day free trial has started automatically. No credit card required yet.
+                </Text>
+              </div>
             </div>
             <Link to="/app/plans" style={{ textDecoration: "none", flexShrink: 0 }}>
               <Button variant="plain" size="slim">View plans</Button>
