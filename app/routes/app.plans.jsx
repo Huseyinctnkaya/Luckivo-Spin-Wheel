@@ -101,18 +101,19 @@ const FEATURES = [
 ];
 
 export default function PlansPage() {
-  const { isActive, isOnTrial, subscriptionId, subscriptionIsTest, trialEndsAt } = useLoaderData();
-  const { trialExpired } = useRouteLoaderData("routes/app") ?? {};
+  const { isActive, subscriptionId, subscriptionIsTest } = useLoaderData();
+  const { trialExpired, trialDaysRemaining, isPaid } = useRouteLoaderData("routes/app") ?? {};
+  const localTrialActive = !isPaid && trialDaysRemaining > 0;
   const fetcher = useFetcher();
   const isSubmitting = fetcher.state !== "idle";
   const activeIntent = fetcher.formData?.get("intent");
   const isStarting = isSubmitting && activeIntent === "start";
   const isCancelling = isSubmitting && activeIntent === "cancel";
-  const ctaLabel = isOnTrial
+  const ctaLabel = localTrialActive
     ? "Trial Active"
     : isActive
       ? "Current Plan"
-      : "Start 7-day free trial";
+      : "Subscribe now — $3.99/mo";
 
   const handleStart = () => {
     fetcher.submit({ intent: "start" }, { method: "post" });
@@ -143,12 +144,8 @@ export default function PlansPage() {
               <Text as="h2" variant="headingLg" fontWeight="bold">
                 Premium
               </Text>
-              {isActive && !isOnTrial && (
-                <Badge tone="success">Active</Badge>
-              )}
-              {isOnTrial && (
-                <Badge tone="info">Trial</Badge>
-              )}
+              {isActive && <Badge tone="success">Active</Badge>}
+              {localTrialActive && <Badge tone="info">Trial</Badge>}
             </InlineStack>
 
             <Text as="p" tone="subdued">
@@ -167,10 +164,10 @@ export default function PlansPage() {
               </InlineStack>
               <Text as="p" tone="subdued" variant="bodySm">
                 {isActive
-                  ? isOnTrial
-                    ? `You are currently in your free trial${trialEndsAt ? ` until ${new Date(trialEndsAt).toLocaleDateString("en-US")}` : ""}.`
-                    : "Your subscription is active."
-                  : "Includes a 7-day free trial. Cancel anytime."}
+                  ? "Your subscription is active."
+                  : localTrialActive
+                    ? `You have ${trialDaysRemaining} day${trialDaysRemaining === 1 ? "" : "s"} left in your free trial.`
+                    : "Subscribe to continue using Luckivo. Cancel anytime."}
               </Text>
             </div>
 
@@ -210,7 +207,7 @@ export default function PlansPage() {
               <Button
                 fullWidth
                 variant="primary"
-                disabled={isActive}
+                disabled={isActive || localTrialActive}
                 loading={isStarting}
                 onClick={handleStart}
               >
