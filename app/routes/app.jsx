@@ -1,3 +1,4 @@
+import { json, redirect } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
@@ -5,11 +6,14 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import polarisFixes from "../styles/polaris-fixes.css?url";
 import { authenticate, PLANS } from "../shopify.server";
+import db from "../db.server";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
   { rel: "stylesheet", href: polarisFixes },
 ];
+
+const TRIAL_DAYS = 7;
 
 const getBillingIsTest = () => {
   const value = process.env.SHOPIFY_BILLING_TEST?.toLowerCase();
@@ -21,21 +25,42 @@ const getBillingIsTest = () => {
 export const loader = async ({ request }) => {
   const { billing, session } = await authenticate.admin(request);
   const isTest = getBillingIsTest();
-  const storeName = session.shop.replace(".myshopify.com", "");
-  const returnUrl = `https://admin.shopify.com/store/${storeName}/apps/${process.env.SHOPIFY_API_KEY}`;
 
-  await billing.require({
-    plans: [PLANS.PREMIUM_MONTHLY],
-    isTest,
-    onFailure: async () =>
-      billing.request({
-        plan: PLANS.PREMIUM_MONTHLY,
-        isTest,
-        returnUrl,
-      }),
+  // Check billing status without forcing a redirect
+  const billingChecks = await Promise.all(
+    [isTest, !isTest].map((t) =>
+      billing
+        .check({ plans: [PLANS.PREMIUM_MONTHLY], isTest: t })
+        .catch(() => ({ hasActivePayment: false })),
+    ),
+  );
+  const isPaid = billingChecks.some((c) => c.hasActivePayment);
+
+  // Ensure shop install date is tracked
+  await db.shop.upsert({
+    where: { shop: session.shop },
+    create: { shop: session.shop },
+    update: {},
   });
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+  const shopRecord = await db.shop.findUnique({ where: { shop: session.shop } });
+  const daysSinceInstall =
+    (Date.now() - shopRecord.installedAt.getTime()) / (1000 * 60 * 60 * 24);
+  const trialDaysRemaining = Math.max(0, Math.ceil(TRIAL_DAYS - daysSinceInstall));
+  const trialExpired = !isPaid && trialDaysRemaining === 0;
+
+  // Trial bittiyse ve ödeme yoksa → plans sayfasına yönlendir (plans sayfası hariç)
+  const url = new URL(request.url);
+  if (trialExpired && !url.pathname.startsWith("/app/plans")) {
+    return redirect("/app/plans");
+  }
+
+  return json({
+    apiKey: process.env.SHOPIFY_API_KEY || "",
+    isPaid,
+    trialDaysRemaining,
+    trialExpired,
+  });
 };
 
 export default function App() {

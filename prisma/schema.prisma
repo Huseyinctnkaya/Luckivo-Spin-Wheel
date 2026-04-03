@@ -75,6 +75,12 @@ model Impression {
   createdAt   DateTime @default(now())
 }
 
+model Shop {
+  id          String   @id @default(uuid())
+  shop        String   @unique
+  installedAt DateTime @default(now())
+}
+
 model CustomCode {
   id   String @id @default(uuid())
   shop String @unique

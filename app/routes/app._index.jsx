@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import { useLoaderData, useSearchParams, Link } from "@remix-run/react";
+import { useLoaderData, useRouteLoaderData, useSearchParams, Link } from "@remix-run/react";
 import {
   Page,
   Text,
@@ -20,6 +20,7 @@ import {
   ChevronUpIcon,
   EmailIcon,
   NoteIcon,
+  AlertTriangleIcon,
 } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
@@ -224,6 +225,8 @@ export default function Index() {
     setup,
   } = useLoaderData();
 
+  const { isPaid, trialDaysRemaining, trialExpired } = useRouteLoaderData("routes/app") ?? {};
+
   const [, setSearchParams] = useSearchParams();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -271,6 +274,61 @@ export default function Index() {
   return (
     <Page title="Luckivo - Spin Wheel Dashboard">
       <BlockStack gap="500">
+        {/* Trial Banner */}
+        {!isPaid && trialExpired && (
+          <div
+            style={{
+              background: "#fff4e5",
+              border: "1px solid #f59e0b",
+              borderRadius: "12px",
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "16px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Icon source={AlertTriangleIcon} tone="caution" />
+              <div>
+                <Text variant="bodyMd" fontWeight="semibold">
+                  Your free trial has ended
+                </Text>
+                <Text variant="bodySm" tone="subdued">
+                  Upgrade to Premium to keep using Luckivo Spin Wheel.
+                </Text>
+              </div>
+            </div>
+            <Link to="/app/plans" style={{ textDecoration: "none", flexShrink: 0 }}>
+              <Button variant="primary" size="slim">Upgrade now — $3.99/mo</Button>
+            </Link>
+          </div>
+        )}
+        {!isPaid && !trialExpired && trialDaysRemaining > 0 && (
+          <div
+            style={{
+              background: "#f0fdf4",
+              border: "1px solid #86efac",
+              borderRadius: "12px",
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "16px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <Text variant="bodyMd" fontWeight="semibold">
+                {trialDaysRemaining === 1
+                  ? "Your free trial ends tomorrow"
+                  : `${trialDaysRemaining} days left in your free trial`}
+              </Text>
+            </div>
+            <Link to="/app/plans" style={{ textDecoration: "none", flexShrink: 0 }}>
+              <Button variant="plain" size="slim">View plans</Button>
+            </Link>
+          </div>
+        )}
         {/* Stats Bar */}
         <div
           style={{

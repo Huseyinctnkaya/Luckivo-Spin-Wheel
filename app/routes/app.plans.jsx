@@ -1,8 +1,8 @@
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData, useRouteLoaderData, useFetcher } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { PLANS } from "../plans";
-import { Page, Card, Text, BlockStack, InlineStack, Button, Badge } from "@shopify/polaris";
+import { Page, Card, Text, BlockStack, InlineStack, Button, Badge, Banner } from "@shopify/polaris";
 
 const getBillingIsTest = () => {
   const value = process.env.SHOPIFY_BILLING_TEST?.toLowerCase();
@@ -102,6 +102,7 @@ const FEATURES = [
 
 export default function PlansPage() {
   const { isActive, isOnTrial, subscriptionId, subscriptionIsTest, trialEndsAt } = useLoaderData();
+  const { trialExpired } = useRouteLoaderData("routes/app") ?? {};
   const fetcher = useFetcher();
   const isSubmitting = fetcher.state !== "idle";
   const activeIntent = fetcher.formData?.get("intent");
@@ -127,6 +128,13 @@ export default function PlansPage() {
 
   return (
     <Page title="Plans">
+      <BlockStack gap="400">
+      {trialExpired && !isActive && (
+        <Banner tone="warning">
+          <Text as="p" fontWeight="semibold">Your free trial has ended.</Text>
+          <Text as="p">Subscribe to continue using Luckivo Spin Wheel.</Text>
+        </Banner>
+      )}
       <div style={{ maxWidth: "480px" }}>
         <Card>
           <BlockStack gap="400">
@@ -225,6 +233,7 @@ export default function PlansPage() {
           </BlockStack>
         </Card>
       </div>
+      </BlockStack>
     </Page>
   );
 }
