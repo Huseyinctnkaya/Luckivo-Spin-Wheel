@@ -297,7 +297,7 @@ export default function WheelsPage() {
               selectable={false}
             >
               {wheels.map((wheel, index) => (
-                <IndexTable.Row id={wheel.id} key={wheel.id} position={index}>
+                <IndexTable.Row id={wheel.id} key={wheel.id} position={index} onClick={() => navigate(`/app/wheels/${wheel.id}`)}>
                   <IndexTable.Cell>
                     <Text variant="bodyMd" fontWeight="bold" as="span">
                       {wheel.title}
@@ -311,6 +311,7 @@ export default function WheelsPage() {
                     )}
                   </IndexTable.Cell>
                   <IndexTable.Cell>
+                    <div onClick={(e) => e.stopPropagation()}>
                     <InlineStack align="end" gap="200">
                       <Button
                         size="slim"
@@ -342,6 +343,7 @@ export default function WheelsPage() {
                         Delete
                       </Button>
                     </InlineStack>
+                    </div>
                   </IndexTable.Cell>
                 </IndexTable.Row>
               ))}
