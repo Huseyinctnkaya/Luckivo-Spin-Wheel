@@ -25,6 +25,7 @@ import {
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useLanguage } from "../i18n/LanguageContext";
 
 async function checkAppEmbedEnabled(admin) {
   const EXTENSION_UID = "cf1449e6-459b-e542-07bc-86519a150ef9e95a1f96";
@@ -226,6 +227,7 @@ export default function Index() {
   } = useLoaderData();
 
   const { isPaid, trialDaysRemaining, trialExpired } = useRouteLoaderData("routes/app") ?? {};
+  const { t } = useLanguage();
 
   const [, setSearchParams] = useSearchParams();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -253,10 +255,10 @@ export default function Index() {
   };
 
   const dayOptions = [
-    { content: "7 days", onAction: () => handleDaysChange(7), active: days === 7 },
-    { content: "14 days", onAction: () => handleDaysChange(14), active: days === 14 },
-    { content: "30 days", onAction: () => handleDaysChange(30), active: days === 30 },
-    { content: "90 days", onAction: () => handleDaysChange(90), active: days === 90 },
+    { content: t("dashboard_7days"), onAction: () => handleDaysChange(7), active: days === 7 },
+    { content: t("dashboard_14days"), onAction: () => handleDaysChange(14), active: days === 14 },
+    { content: t("dashboard_30days"), onAction: () => handleDaysChange(30), active: days === 30 },
+    { content: t("dashboard_90days"), onAction: () => handleDaysChange(90), active: days === 90 },
   ];
 
   const titleStyle = {
@@ -265,14 +267,14 @@ export default function Index() {
   };
 
   const stats = [
-    { label: "Popups Displayed", value: totalImpressions, tooltip: "Number of times the spin wheel popup was shown." },
-    { label: "Forms Submitted", value: totalSpins, tooltip: "Number of wheel spins completed by visitors." },
-    { label: "Emails Collected", value: emailsCollected, tooltip: "Number of emails collected from visitors." },
-    { label: "Conversions", value: conversionRate, tooltip: "Percentage of popups that resulted in a spin." },
+    { label: t("dashboard_popups_displayed"), value: totalImpressions, tooltip: t("dashboard_tooltip_popups") },
+    { label: t("dashboard_forms_submitted"), value: totalSpins, tooltip: t("dashboard_tooltip_forms") },
+    { label: t("dashboard_emails_collected"), value: emailsCollected, tooltip: t("dashboard_tooltip_emails") },
+    { label: t("dashboard_conversions"), value: conversionRate, tooltip: t("dashboard_tooltip_conversions") },
   ];
 
   return (
-    <Page title="Luckivo - Spin Wheel Dashboard">
+    <Page title={t("dashboard_title")}>
       <BlockStack gap="500">
         {/* Trial Banner */}
         {!isPaid && trialExpired && (
@@ -291,16 +293,12 @@ export default function Index() {
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <Icon source={AlertTriangleIcon} tone="caution" />
               <div>
-                <Text variant="bodyMd" fontWeight="semibold">
-                  Your free trial has ended
-                </Text>
-                <Text variant="bodySm" tone="subdued">
-                  Upgrade to Premium to keep using Luckivo Spin Wheel.
-                </Text>
+                <Text variant="bodyMd" fontWeight="semibold">{t("trial_expired_title")}</Text>
+                <Text variant="bodySm" tone="subdued">{t("trial_expired_desc")}</Text>
               </div>
             </div>
             <Link to="/app/plans" style={{ textDecoration: "none", flexShrink: 0 }}>
-              <Button variant="primary" size="slim">Upgrade now — $3.99/mo</Button>
+              <Button variant="primary" size="slim">{t("trial_upgrade_cta")}</Button>
             </Link>
           </div>
         )}
@@ -320,17 +318,13 @@ export default function Index() {
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div>
                 <Text variant="bodyMd" fontWeight="semibold">
-                  {trialDaysRemaining === 1
-                    ? "Your free trial ends tomorrow"
-                    : `${trialDaysRemaining} days left in your free trial`}
+                  {t("trial_days_left", trialDaysRemaining)}
                 </Text>
-                <Text variant="bodySm" tone="subdued">
-                  Your 7-day free trial has started automatically. No credit card required yet.
-                </Text>
+                <Text variant="bodySm" tone="subdued">{t("trial_auto_started")}</Text>
               </div>
             </div>
             <Link to="/app/plans" style={{ textDecoration: "none", flexShrink: 0 }}>
-              <Button variant="plain" size="slim">View plans</Button>
+              <Button variant="plain" size="slim">{t("trial_view_plans")}</Button>
             </Link>
           </div>
         )}
@@ -430,21 +424,21 @@ export default function Index() {
         <InlineStack gap="400" align="start" wrap={false}>
           {[
             {
-              title: "Wheels",
-              description: "Create, manage or schedule your wheels.",
-              button: "View wheels",
+              title: t("dashboard_card_wheels"),
+              description: t("dashboard_card_wheels_desc"),
+              button: t("dashboard_card_wheels_btn"),
               url: "/app/wheels",
             },
             {
-              title: "Subscribers",
-              description: "View and manage your subscribers who signed up for the spin wheel.",
-              button: "View subscribers",
+              title: t("dashboard_card_subscribers"),
+              description: t("dashboard_card_subscribers_desc"),
+              button: t("dashboard_card_subscribers_btn"),
               url: "/app/subscribers",
             },
             {
-              title: "Analytics",
-              description: "View your campaign performance and conversions.",
-              button: "View analytics",
+              title: t("dashboard_card_analytics"),
+              description: t("dashboard_card_analytics_desc"),
+              button: t("dashboard_card_analytics_btn"),
               url: "/app/analytics",
             },
           ].map((card) => (
@@ -496,15 +490,15 @@ export default function Index() {
           >
             <BlockStack gap="200">
               <Text variant="headingMd" as="h3" fontWeight="bold">
-                Custom Code
+                {t("dashboard_card_custom_code")}
               </Text>
               <Text variant="bodyMd" tone="subdued">
-                Add custom CSS or JavaScript to your spin wheel to match your brand perfectly.
+                {t("dashboard_card_custom_code_desc")}
               </Text>
             </BlockStack>
             <div style={{ marginTop: "16px" }}>
               <Link to="/app/custom-code" style={{ textDecoration: "none" }}>
-                <Button variant="primary">Manage Custom Code</Button>
+                <Button variant="primary">{t("dashboard_card_custom_code_btn")}</Button>
               </Link>
             </div>
           </div>
@@ -523,15 +517,15 @@ export default function Index() {
           >
             <BlockStack gap="200">
               <Text variant="headingMd" as="h3" fontWeight="bold">
-                Import & Export
+                {t("dashboard_card_import_export")}
               </Text>
               <Text variant="bodyMd" tone="subdued">
-                Backup your campaigns and settings, or transfer them to another store.
+                {t("dashboard_card_import_export_desc")}
               </Text>
             </BlockStack>
             <div style={{ marginTop: "16px" }}>
               <Link to="/app/import-export" style={{ textDecoration: "none" }}>
-                <Button variant="primary">Import/Export Settings</Button>
+                <Button variant="primary">{t("dashboard_card_import_export_btn")}</Button>
               </Link>
             </div>
           </div>
@@ -549,7 +543,7 @@ export default function Index() {
           }}
         >
           <Text variant="headingMd" as="h3" fontWeight="bold">
-            Need help or customization?
+            {t("dashboard_help_title")}
           </Text>
           <div style={{ display: "flex", gap: "16px", marginTop: "16px" }}>
             <a
@@ -570,12 +564,12 @@ export default function Index() {
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <Icon source={EmailIcon} tone="base" />
                   <Text variant="headingSm" as="h4" fontWeight="semibold">
-                    Email Support
+                    {t("dashboard_help_email")}
                   </Text>
                 </div>
                 <div style={{ marginTop: "4px" }}>
                   <Text variant="bodyMd" tone="subdued">
-                    Send us an email and we'll get back to you as soon as possible.
+                    {t("dashboard_help_email_desc")}
                   </Text>
                 </div>
               </div>
@@ -598,12 +592,12 @@ export default function Index() {
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <Icon source={NoteIcon} tone="base" />
                   <Text variant="headingSm" as="h4" fontWeight="semibold">
-                    Documentation
+                    {t("dashboard_help_docs")}
                   </Text>
                 </div>
                 <div style={{ marginTop: "4px" }}>
                   <Text variant="bodyMd" tone="subdued">
-                    Find solutions with our docs and tutorials.
+                    {t("dashboard_help_docs_desc")}
                   </Text>
                 </div>
               </div>
@@ -617,6 +611,7 @@ export default function Index() {
 }
 
 function SetupGuide({ setup }) {
+  const { t } = useLanguage();
   const completedCount = [setup.appEnabled, setup.hasCampaign, setup.hasActiveCampaign].filter(Boolean).length;
   const [expanded, setExpanded] = useState(completedCount < 3);
   const [activeStep, setActiveStep] = useState(
@@ -625,23 +620,23 @@ function SetupGuide({ setup }) {
 
   const steps = [
     {
-      title: "Enable the app",
-      description: "Enable the app to start using the spin wheel popup.",
+      title: t("dashboard_step_enable"),
+      description: t("dashboard_step_enable_desc"),
       completed: setup.appEnabled,
-      action: { label: "Enable", url: setup.enableUrl },
-      secondaryAction: { label: "Refresh", url: "." },
+      action: { label: t("dashboard_step_enable_btn"), url: setup.enableUrl },
+      secondaryAction: { label: t("dashboard_step_refresh"), url: "." },
     },
     {
-      title: "Create your first campaign",
-      description: "Set up a spin wheel with custom segments and prizes.",
+      title: t("dashboard_step_create"),
+      description: t("dashboard_step_create_desc"),
       completed: setup.hasCampaign,
-      action: { label: "Create campaign", url: "/app/wheels/new" },
+      action: { label: t("dashboard_step_create_btn"), url: "/app/wheels/new" },
     },
     {
-      title: "Activate your campaign",
-      description: "Publish your wheel so customers can start spinning.",
+      title: t("dashboard_step_activate"),
+      description: t("dashboard_step_activate_desc"),
       completed: setup.hasActiveCampaign,
-      action: { label: "Go to campaigns", url: "/app/wheels" },
+      action: { label: t("dashboard_step_activate_btn"), url: "/app/wheels" },
     },
   ];
 
@@ -667,10 +662,10 @@ function SetupGuide({ setup }) {
       >
         <InlineStack gap="300" blockAlign="center">
           <Text variant="headingMd" as="h2" fontWeight="bold">
-            Setup Guide
+            {t("dashboard_setup_guide")}
           </Text>
           <Badge tone={completedCount === 3 ? "success" : undefined}>
-            {completedCount} / 3 completed
+            {t("dashboard_setup_completed", completedCount)}
           </Badge>
         </InlineStack>
         <div style={{ display: "flex" }}>
@@ -681,7 +676,7 @@ function SetupGuide({ setup }) {
       <Collapsible open={expanded}>
         <div style={{ padding: "0 20px 12px" }}>
           <Text variant="bodyMd" tone="subdued">
-            Use this personalized guide to get your app up and running.
+            {t("dashboard_setup_subtitle")}
           </Text>
         </div>
 
@@ -702,6 +697,7 @@ function SetupGuide({ setup }) {
 }
 
 function SetupStep({ step, isActive, onToggle }) {
+  const { t } = useLanguage();
   const isExternal = (url) => typeof url === "string" && /^https?:\/\//.test(url);
 
   return (
@@ -744,7 +740,7 @@ function SetupStep({ step, isActive, onToggle }) {
         <div style={{ padding: "0 20px 16px 52px" }}>
           {step.completed ? (
             <Text variant="bodyMd" tone="success">
-              Completed
+              {t("completed")}
             </Text>
           ) : (
             <BlockStack gap="300">

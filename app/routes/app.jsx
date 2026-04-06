@@ -7,6 +7,7 @@ import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import polarisFixes from "../styles/polaris-fixes.css?url";
 import { authenticate, PLANS } from "../shopify.server";
 import db from "../db.server";
+import { LanguageProvider, useLanguage } from "../i18n/LanguageContext";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
@@ -68,18 +69,77 @@ export default function App() {
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
-      <NavMenu>
-        <Link to="/app" rel="home">
-          Home
-        </Link>
-        <Link to="/app/wheels">Wheels</Link>
-        <Link to="/app/subscribers">Subscribers</Link>
-        <Link to="/app/email-settings">Email</Link>
-        <Link to="/app/analytics">Analytics</Link>
-        <Link to="/app/plans">Plans</Link>
-      </NavMenu>
-      <Outlet />
+      <LanguageProvider>
+        <AppShell />
+      </LanguageProvider>
     </AppProvider>
+  );
+}
+
+function AppShell() {
+  const { t, lang, setLang } = useLanguage();
+
+  return (
+    <>
+      <NavMenu>
+        <Link to="/app" rel="home">{t("nav_home")}</Link>
+        <Link to="/app/wheels">{t("nav_wheels")}</Link>
+        <Link to="/app/subscribers">{t("nav_subscribers")}</Link>
+        <Link to="/app/email-settings">{t("nav_email")}</Link>
+        <Link to="/app/analytics">{t("nav_analytics")}</Link>
+        <Link to="/app/plans">{t("nav_plans")}</Link>
+      </NavMenu>
+      <LanguageSelector lang={lang} setLang={setLang} />
+      <Outlet />
+    </>
+  );
+}
+
+function LanguageSelector({ lang, setLang }) {
+  const langs = ["tr", "en"];
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: "12px",
+        right: "16px",
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+        background: "var(--p-color-bg-surface)",
+        border: "1px solid #e3e3e3",
+        borderRadius: "8px",
+        padding: "4px 6px",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8c9196" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      {langs.map((l) => (
+        <button
+          key={l}
+          onClick={() => setLang(l)}
+          style={{
+            padding: "2px 8px",
+            borderRadius: "5px",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "12px",
+            fontWeight: 600,
+            background: lang === l ? "#303030" : "transparent",
+            color: lang === l ? "#ffffff" : "#6d7175",
+            transition: "all 150ms ease",
+          }}
+        >
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
   );
 }
 

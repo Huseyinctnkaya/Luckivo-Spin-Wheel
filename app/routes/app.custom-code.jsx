@@ -11,6 +11,7 @@ import {
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState } from "react";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -44,6 +45,7 @@ export default function CustomCodePage() {
 
   const isSaving = navigation.state === "submitting";
   const hasChanges = code !== savedCode;
+  const { t } = useLanguage();
 
   const handleSave = () => {
     const formData = new FormData();
@@ -52,20 +54,16 @@ export default function CustomCodePage() {
   };
 
   return (
-    <Page title="Custom Code" backAction={{ url: "/app" }}>
+    <Page title={t("custom_code_title")} backAction={{ url: "/app" }}>
       <BlockStack gap="400">
         <Banner tone="info">
-          <p>
-            Add custom CSS or JavaScript to personalize your spin wheel. The
-            code will be injected into your storefront when the wheel is
-            displayed.
-          </p>
+          <p>{t("custom_code_banner")}</p>
         </Banner>
 
         <Card>
           <BlockStack gap="400">
             <Text variant="headingSm" as="h3">
-              Custom Code
+              {t("custom_code_card_title")}
             </Text>
             <div
               style={{
@@ -101,7 +99,7 @@ export default function CustomCodePage() {
                 loading={isSaving}
                 disabled={!hasChanges || isSaving}
               >
-                Save
+                {t("save")}
               </Button>
             </div>
           </BlockStack>

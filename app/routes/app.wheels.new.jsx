@@ -17,6 +17,7 @@ import {
   DEFAULT_WHEEL_TEMPLATE_ID,
   WHEEL_TEMPLATE_MAP,
 } from "../data/wheel-templates";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
@@ -70,6 +71,7 @@ export default function NewWheel() {
   const submit = useSubmit();
   const navigation = useNavigation();
   const isLoading = navigation.state === "submitting";
+  const { t } = useLanguage();
 
   const handleSave = () => {
     const config = JSON.stringify({
@@ -89,11 +91,11 @@ export default function NewWheel() {
 
   return (
     <Page
-      backAction={{ content: "Wheels", url: "/app/wheels" }}
-      title="Create Wheel"
+      backAction={{ content: t("wheel_new_back"), url: "/app/wheels" }}
+      title={t("wheel_new_title")}
       primaryAction={
         <Button variant="primary" onClick={handleSave} loading={isLoading}>
-          Save and Edit Segments
+          {t("wheel_new_save_btn")}
         </Button>
       }
     >
@@ -103,19 +105,19 @@ export default function NewWheel() {
             <Card>
               <FormLayout>
                 <TextField
-                  label="Wheel Title"
+                  label={t("wheel_new_field_title")}
                   value={title}
                   onChange={setTitle}
                   autoComplete="off"
-                  helpText="Give your wheel a name (internal use only)"
+                  helpText={t("wheel_new_field_title_help")}
                 />
                 <TextField
-                  label="Primary Theme Color"
+                  label={t("wheel_new_field_color")}
                   value={primaryColor}
                   onChange={setPrimaryColor}
                   autoComplete="off"
                   prefix="#"
-                  helpText="Choose a primary color for your wheel (Hex code)"
+                  helpText={t("wheel_new_field_color_help")}
                 />
               </FormLayout>
             </Card>
@@ -125,10 +127,10 @@ export default function NewWheel() {
           <Card>
             <BlockStack gap="200">
               <Text variant="headingMd" as="h2">
-                Template Segments
+                {t("wheel_new_template_title")}
               </Text>
               <Text variant="bodyMd" as="p" tone="subdued">
-                This template includes {template.segments.length} segments:
+                {t("wheel_new_template_desc", template.segments.length)}
               </Text>
               <BlockStack gap="100">
                 {template.segments.map((seg, i) => (
@@ -136,7 +138,7 @@ export default function NewWheel() {
                 ))}
               </BlockStack>
               <Text variant="bodySm" tone="subdued" as="p">
-                You can edit segments after saving.
+                {t("wheel_new_template_footer")}
               </Text>
             </BlockStack>
           </Card>

@@ -18,6 +18,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -109,6 +110,7 @@ export default function SubscribersPage() {
   const [, setSearchParams] = useSearchParams();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const { t } = useLanguage();
 
   const toggleDatePicker = useCallback(() => setDatePickerOpen((value) => !value), []);
 
@@ -130,10 +132,10 @@ export default function SubscribersPage() {
   };
 
   const dayOptions = [
-    { content: "7 days", onAction: () => handleDaysChange(7), active: days === 7 },
-    { content: "14 days", onAction: () => handleDaysChange(14), active: days === 14 },
-    { content: "30 days", onAction: () => handleDaysChange(30), active: days === 30 },
-    { content: "90 days", onAction: () => handleDaysChange(90), active: days === 90 },
+    { content: t("dashboard_7days"), onAction: () => handleDaysChange(7), active: days === 7 },
+    { content: t("dashboard_14days"), onAction: () => handleDaysChange(14), active: days === 14 },
+    { content: t("dashboard_30days"), onAction: () => handleDaysChange(30), active: days === 30 },
+    { content: t("dashboard_90days"), onAction: () => handleDaysChange(90), active: days === 90 },
   ];
 
   const filteredSubmissions = useMemo(() => {
@@ -149,9 +151,9 @@ export default function SubscribersPage() {
 
   return (
     <Page
-      title="Subscribers"
-      subtitle={`${totalFormSubmissions} total submissions`}
-      secondaryActions={[{ content: "Analytics", url: "/app/analytics" }]}
+      title={t("subscribers_title")}
+      subtitle={t("subscribers_subtitle", totalFormSubmissions)}
+      secondaryActions={[{ content: t("subscribers_analytics_link"), url: "/app/analytics" }]}
     >
       <BlockStack gap="500">
         <div
@@ -193,10 +195,10 @@ export default function SubscribersPage() {
             </Popover>
           </div>
 
-          <MetricCell label="Email/Phone Collected" value={emailOrPhoneCollected} />
-          <MetricCell label="Total Popups Displayed" value={totalPopupsDisplayed} />
-          <MetricCell label="Total Form Submissions" value={totalFormSubmissions} />
-          <MetricCell label="Email AI" value={emailAi} />
+          <MetricCell label={t("subscribers_metric_email_phone")} value={emailOrPhoneCollected} />
+          <MetricCell label={t("subscribers_metric_popups")} value={totalPopupsDisplayed} />
+          <MetricCell label={t("subscribers_metric_submissions")} value={totalFormSubmissions} />
+          <MetricCell label={t("subscribers_metric_email_ai")} value={emailAi} />
 
           <div
             style={{
@@ -247,37 +249,37 @@ export default function SubscribersPage() {
           <BlockStack gap="400">
             <InlineStack align="space-between" blockAlign="center">
               <Text variant="headingMd" as="h2" fontWeight="bold">
-                Recent Submissions
+                {t("subscribers_recent_title")}
               </Text>
               <Button onClick={() => shopify.navigate(`https://${shop}/admin/customers`, { target: "_blank" })}>
-                View in Shopify
+                {t("subscribers_view_shopify")}
               </Button>
             </InlineStack>
 
             <TextField
-              label="Search submissions"
+              label={t("subscribers_search_placeholder")}
               labelHidden
               autoComplete="off"
               value={query}
               onChange={setQuery}
-              placeholder="Search by email, phone, code, or reward..."
+              placeholder={t("subscribers_search_placeholder")}
             />
 
             {recentSubmissions.length === 0 ? (
               <Box paddingBlockStart="300">
                 <BlockStack gap="200">
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    No submissions found yet.
+                    {t("subscribers_empty_1")}
                   </Text>
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    Submissions will appear here once visitors spin the wheel.
+                    {t("subscribers_empty_2")}
                   </Text>
                 </BlockStack>
               </Box>
             ) : filteredSubmissions.length === 0 ? (
               <Box paddingBlockStart="300">
                 <Text as="p" variant="bodyMd" tone="subdued">
-                  No results matched your search.
+                  {t("subscribers_no_results")}
                 </Text>
               </Box>
             ) : (
@@ -291,11 +293,11 @@ export default function SubscribersPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#f6f6f7" }}>
-                      <TableHeadCell>Contact</TableHeadCell>
-                      <TableHeadCell>Campaign</TableHeadCell>
-                      <TableHeadCell>Reward</TableHeadCell>
-                      <TableHeadCell>Code</TableHeadCell>
-                      <TableHeadCell>Date</TableHeadCell>
+                      <TableHeadCell>{t("subscribers_col_contact")}</TableHeadCell>
+                      <TableHeadCell>{t("subscribers_col_campaign")}</TableHeadCell>
+                      <TableHeadCell>{t("subscribers_col_reward")}</TableHeadCell>
+                      <TableHeadCell>{t("subscribers_col_code")}</TableHeadCell>
+                      <TableHeadCell>{t("subscribers_col_date")}</TableHeadCell>
                     </tr>
                   </thead>
                   <tbody>

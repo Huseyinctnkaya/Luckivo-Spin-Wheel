@@ -3,6 +3,7 @@ import { useLoaderData, useRouteLoaderData, useFetcher } from "@remix-run/react"
 import { authenticate } from "../shopify.server";
 import { PLANS } from "../plans";
 import { Page, Card, Text, BlockStack, InlineStack, Button, Badge, Banner } from "@shopify/polaris";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const getBillingIsTest = () => {
   const value = process.env.SHOPIFY_BILLING_TEST?.toLowerCase();
@@ -90,19 +91,20 @@ export const action = async ({ request }) => {
   return null;
 };
 
-const FEATURES = [
-  "Unlimited spin wheel campaigns",
-  "Unlimited submissions",
-  "Advanced design customization",
-  "Full analytics & date ranges",
-  "Import / export tools",
-  "Email notifications",
-  "Priority support",
+const FEATURE_KEYS = [
+  "plans_feature_1",
+  "plans_feature_2",
+  "plans_feature_3",
+  "plans_feature_4",
+  "plans_feature_5",
+  "plans_feature_6",
+  "plans_feature_7",
 ];
 
 export default function PlansPage() {
   const { isActive, subscriptionId, subscriptionIsTest } = useLoaderData();
   const { trialExpired, trialDaysRemaining, isPaid } = useRouteLoaderData("routes/app") ?? {};
+  const { t } = useLanguage();
   const localTrialActive = !isPaid && trialDaysRemaining > 0;
   const fetcher = useFetcher();
   const isSubmitting = fetcher.state !== "idle";
@@ -110,10 +112,10 @@ export default function PlansPage() {
   const isStarting = isSubmitting && activeIntent === "start";
   const isCancelling = isSubmitting && activeIntent === "cancel";
   const ctaLabel = localTrialActive
-    ? "Trial Active"
+    ? t("plans_cta_trial_active")
     : isActive
-      ? "Current Plan"
-      : "Subscribe now — $3.99/mo";
+      ? t("plans_cta_current")
+      : t("plans_cta_subscribe");
 
   const handleStart = () => {
     fetcher.submit({ intent: "start" }, { method: "post" });
@@ -128,12 +130,12 @@ export default function PlansPage() {
   };
 
   return (
-    <Page title="Plans">
+    <Page title={t("plans_title")}>
       <BlockStack gap="400">
       {trialExpired && !isActive && (
         <Banner tone="warning">
-          <Text as="p" fontWeight="semibold">Your free trial has ended.</Text>
-          <Text as="p">Subscribe to continue using Luckivo Spin Wheel.</Text>
+          <Text as="p" fontWeight="semibold">{t("plans_trial_expired_title")}</Text>
+          <Text as="p">{t("plans_trial_expired_desc")}</Text>
         </Banner>
       )}
       <div style={{ maxWidth: "480px" }}>
@@ -142,39 +144,39 @@ export default function PlansPage() {
             {/* Header */}
             <InlineStack gap="200" blockAlign="center">
               <Text as="h2" variant="headingLg" fontWeight="bold">
-                Premium
+                {t("plans_premium")}
               </Text>
-              {isActive && <Badge tone="success">Active</Badge>}
-              {localTrialActive && <Badge tone="info">Trial</Badge>}
+              {isActive && <Badge tone="success">{t("plans_badge_active")}</Badge>}
+              {localTrialActive && <Badge tone="info">{t("plans_badge_trial")}</Badge>}
             </InlineStack>
 
             <Text as="p" tone="subdued">
-              Everything you need to grow your store with spin wheel campaigns.
+              {t("plans_desc")}
             </Text>
 
             {/* Price */}
             <div>
               <InlineStack gap="100" blockAlign="end">
                 <Text as="p" variant="heading2xl" fontWeight="bold">
-                  $3.99
+                  {t("plans_price")}
                 </Text>
                 <Text as="p" tone="subdued">
-                  /month
+                  {t("plans_per_month")}
                 </Text>
               </InlineStack>
               <Text as="p" tone="subdued" variant="bodySm">
                 {isActive
-                  ? "Your subscription is active."
+                  ? t("plans_status_active")
                   : localTrialActive
-                    ? `You have ${trialDaysRemaining} day${trialDaysRemaining === 1 ? "" : "s"} left in your free trial.`
-                    : "Subscribe to continue using Luckivo. Cancel anytime."}
+                    ? t("plans_status_trial", trialDaysRemaining)
+                    : t("plans_status_expired")}
               </Text>
             </div>
 
             {/* Features */}
             <BlockStack gap="200">
-              {FEATURES.map((feature) => (
-                <InlineStack key={feature} gap="200" blockAlign="center">
+              {FEATURE_KEYS.map((key) => (
+                <InlineStack key={key} gap="200" blockAlign="center">
                   <span
                     style={{
                       width: "16px",
@@ -197,7 +199,7 @@ export default function PlansPage() {
                       }}
                     />
                   </span>
-                  <Text as="span">{feature}</Text>
+                  <Text as="span">{t(key)}</Text>
                 </InlineStack>
               ))}
             </BlockStack>
@@ -223,7 +225,7 @@ export default function PlansPage() {
                   loading={isCancelling}
                   onClick={handleCancel}
                 >
-                  Cancel plan
+                  {t("plans_cancel")}
                 </Button>
               </div>
             )}

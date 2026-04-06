@@ -22,6 +22,7 @@ import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState, useCallback } from "react";
 import { WHEEL_TEMPLATES } from "../data/wheel-templates";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function buildTemplateWheelGradient(segments) {
   if (!Array.isArray(segments) || segments.length === 0) {
@@ -236,6 +237,7 @@ export default function WheelsPage() {
   const navigate = useNavigate();
   const matches = useMatches();
   const [modalOpen, setModalOpen] = useState(false);
+  const { t } = useLanguage();
 
   const childRouteActive = matches.some(
     (match) =>
@@ -257,31 +259,31 @@ export default function WheelsPage() {
 
   return (
     <Page
-      title="Wheels"
+      title={t("nav_wheels")}
       primaryAction={
         <Button variant="primary" onClick={openModal}>
-          Create Wheel
+          {t("wheel_new_title")}
         </Button>
       }
     >
       <Card padding="0">
         <Box padding="400" paddingBlockEnd="0">
           <Text variant="headingMd" as="h2" fontWeight="bold">
-            Your wheels
+            {t("wheels_title")}
           </Text>
         </Box>
 
         {wheels.length === 0 ? (
           <Box padding="400">
             <EmptyState
-              heading="Create your first wheel"
+              heading={t("wheels_empty_title")}
               action={{
-                content: "Create Wheel",
+                content: t("wheel_new_title"),
                 onAction: openModal,
               }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
-              <p>Create your first wheel to start collecting emails and rewards.</p>
+              <p>{t("wheels_empty_desc")}</p>
             </EmptyState>
           </Box>
         ) : (
@@ -290,9 +292,9 @@ export default function WheelsPage() {
               resourceName={{ singular: "wheel", plural: "wheels" }}
               itemCount={wheels.length}
               headings={[
-                { title: "Name" },
-                { title: "Status" },
-                { title: "Actions", alignment: "end" },
+                { title: t("wheels_name") },
+                { title: t("wheels_status") },
+                { title: t("wheels_actions"), alignment: "end" },
               ]}
               selectable={false}
             >
@@ -305,9 +307,9 @@ export default function WheelsPage() {
                   </IndexTable.Cell>
                   <IndexTable.Cell>
                     {wheel.isActive ? (
-                      <Badge tone="success">Active</Badge>
+                      <Badge tone="success">{t("active")}</Badge>
                     ) : (
-                      <Badge tone="attention">Draft</Badge>
+                      <Badge tone="attention">{t("draft")}</Badge>
                     )}
                   </IndexTable.Cell>
                   <IndexTable.Cell>
@@ -317,7 +319,7 @@ export default function WheelsPage() {
                         size="slim"
                         onClick={() => navigate(`/app/wheels/${wheel.id}`)}
                       >
-                        Edit
+                        {t("edit")}
                       </Button>
                       <Button
                         size="slim"
@@ -328,7 +330,7 @@ export default function WheelsPage() {
                           )
                         }
                       >
-                        Duplicate
+                        {t("duplicate")}
                       </Button>
                       <Button
                         size="slim"
@@ -340,7 +342,7 @@ export default function WheelsPage() {
                           )
                         }
                       >
-                        Delete
+                        {t("delete")}
                       </Button>
                     </InlineStack>
                     </div>
@@ -353,7 +355,7 @@ export default function WheelsPage() {
       </Card>
 
       {/* Template Selection Modal */}
-      <Modal open={modalOpen} onClose={closeModal} title="Create Wheel">
+      <Modal open={modalOpen} onClose={closeModal} title={t("wheel_new_title")}>
         <Modal.Section>
           <div
             style={{
@@ -414,7 +416,7 @@ export default function WheelsPage() {
                     onClick={() => handleSelectTemplate(template.id)}
                     size="slim"
                   >
-                    Select
+                    {t("select")}
                   </Button>
                 </div>
               </div>

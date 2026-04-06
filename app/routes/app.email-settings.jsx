@@ -21,6 +21,7 @@ import {
 } from "@shopify/polaris";
 import { SaveBar } from "@shopify/app-bridge-react";
 import { useState, useCallback, useMemo } from "react";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function toHsbColor(hex) {
   try {
@@ -138,6 +139,7 @@ export default function EmailSettingsPage() {
   const submit = useSubmit();
   const navigation = useNavigation();
   const isSaving = navigation.state === "submitting";
+  const { t } = useLanguage();
 
   const [enabled, setEnabled] = useState(loaded.enabled);
   const [fromEmail, setFromEmail] = useState(loaded.fromEmail);
@@ -227,19 +229,19 @@ export default function EmailSettingsPage() {
     <>
       <SaveBar open={isDirty}>
         <button variant="primary" onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Kaydediliyor..." : "Kaydet"}
+          {isSaving ? t("saving") : t("save")}
         </button>
         <button onClick={handleDiscard} disabled={isSaving}>
-          Vazgeç
+          {t("discard")}
         </button>
       </SaveBar>
 
     <Page
-      title="Email Settings"
-      subtitle="Configure discount code emails sent to customers after spinning"
+      title={t("email_settings_title")}
+      subtitle={t("email_settings_subtitle")}
       secondaryActions={[
         {
-          content: "Preview",
+          content: t("email_settings_preview_btn"),
           onAction: () => setPreviewModalOpen(true),
         },
       ]}
@@ -247,10 +249,9 @@ export default function EmailSettingsPage() {
       <Layout>
         {!loaded.hasResendKey && (
           <Layout.Section>
-            <Banner title="Resend API key missing" tone="critical">
+            <Banner title={t("email_settings_no_resend_title")} tone="critical">
               <Text as="p">
-                Add <strong>RESEND_API_KEY</strong> to your <code>.env</code> file to enable email sending.
-                Get your key at <strong>resend.com</strong>.
+                {t("email_settings_no_resend_desc")}
               </Text>
             </Banner>
           </Layout.Section>
@@ -265,10 +266,10 @@ export default function EmailSettingsPage() {
                 <InlineStack align="space-between" blockAlign="center">
                   <BlockStack gap="100">
                     <Text as="h2" variant="headingMd" fontWeight="semibold">
-                      Email Notifications
+                      {t("email_notifications_title")}
                     </Text>
                     <Text as="p" tone="subdued">
-                      Send discount codes to customers via email after they spin
+                      {t("email_notifications_desc")}
                     </Text>
                   </BlockStack>
                   <div
@@ -305,24 +306,24 @@ export default function EmailSettingsPage() {
                     <Divider />
                     <BlockStack gap="300">
                       <TextField
-                        label="From name"
+                        label={t("email_from_name")}
                         value={fromName}
                         onChange={setFromName}
                         autoComplete="off"
                         placeholder="My Store"
-                        helpText="Name shown as the sender in the inbox"
+                        helpText={t("email_from_name_help")}
                       />
                       <TextField
-                        label="Reply-To email"
+                        label={t("email_reply_to")}
                         value={fromEmail}
                         onChange={setFromEmail}
                         autoComplete="off"
                         type="email"
                         placeholder="hello@yourdomain.com"
-                        helpText="Customers who reply to the email will reach this address"
+                        helpText={t("email_reply_to_help")}
                       />
                       <TextField
-                        label="Email subject"
+                        label={t("email_subject")}
                         value={subject}
                         onChange={setSubject}
                         autoComplete="off"
@@ -332,10 +333,9 @@ export default function EmailSettingsPage() {
 
                     <Box background="bg-surface-secondary" borderRadius="200" padding="300">
                       <BlockStack gap="100">
-                        <Text as="p" variant="bodySm" fontWeight="semibold">How it works</Text>
+                        <Text as="p" variant="bodySm" fontWeight="semibold">{t("email_how_it_works_title")}</Text>
                         <Text as="p" variant="bodySm" tone="subdued">
-                          Emails are sent from <strong>noreply@luckivo.app</strong> on your behalf — no setup required.
-                          If you enter a Reply-To email, customers who reply will reach that address directly.
+                          {t("email_how_it_works_desc")}
                         </Text>
                       </BlockStack>
                     </Box>
@@ -348,10 +348,10 @@ export default function EmailSettingsPage() {
             {enabled && <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd" fontWeight="semibold">
-                  Email Template
+                  {t("email_template_title")}
                 </Text>
                 <Text as="p" tone="subdued">
-                  Customize the look and content of the email your customers receive
+                  {t("email_template_desc")}
                 </Text>
 
                 <Divider />
@@ -438,24 +438,24 @@ export default function EmailSettingsPage() {
                 {/* CTA Button */}
                 <BlockStack gap="300">
                   <Text as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
-                    CALL TO ACTION BUTTON (optional)
+                    {t("email_cta_optional")}
                   </Text>
                   <TextField
-                    label="Button text"
+                    label={t("email_cta_btn_text")}
                     value={ctaText}
                     onChange={setCtaText}
                     autoComplete="off"
                     placeholder="Shop Now"
                   />
                   <TextField
-                    label="Button URL"
+                    label={t("email_cta_btn_url")}
                     value={ctaUrl}
                     onChange={setCtaUrl}
                     autoComplete="off"
                     type="url"
                     placeholder="https://yourstore.com"
                   />
-                  <Text as="p" variant="bodySm" tone="subdued">Leave empty to hide the button</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{t("email_cta_empty_hint")}</Text>
                 </BlockStack>
 
               </BlockStack>
@@ -471,7 +471,7 @@ export default function EmailSettingsPage() {
       <Modal
         open={previewModalOpen}
         onClose={() => setPreviewModalOpen(false)}
-        title="Email Preview"
+        title={t("email_preview_modal_title")}
         size="large"
       >
         <Modal.Section>

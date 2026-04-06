@@ -35,6 +35,7 @@ import {
 } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const WHEEL_STYLE_OPTIONS = [
   { label: "Default", value: "default" },
@@ -120,19 +121,6 @@ const COUNTDOWN_POSITION_OPTIONS = [
   { label: "Bottom of the screen", value: "bottom_of_screen" },
 ];
 
-const PREVIEW_TABS = [
-  { label: "Initial", value: "initial" },
-  { label: "Result", value: "result" },
-  { label: "Side button", value: "side_button" },
-  { label: "Countdown", value: "countdown" },
-];
-
-const CONTENT_TABS = [
-  { label: "General", value: "general" },
-  { label: "Success", value: "success" },
-  { label: "No luck", value: "no_luck" },
-  { label: "Errors", value: "errors" },
-];
 
 const DISCOUNT_TYPE_OPTIONS = [
   { label: "Percentage", value: "percentage" },
@@ -688,9 +676,24 @@ export default function WheelEditor() {
 
   const submit = useSubmit();
   const navigation = useNavigation();
+  const { t } = useLanguage();
   const isSaving =
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") !== "delete";
+
+  const PREVIEW_TABS = [
+    { label: t("wheel_editor_preview_tab_initial"), value: "initial" },
+    { label: t("wheel_editor_preview_tab_result"), value: "result" },
+    { label: t("wheel_editor_preview_tab_side_button"), value: "side_button" },
+    { label: t("wheel_editor_preview_tab_countdown"), value: "countdown" },
+  ];
+
+  const CONTENT_TABS = [
+    { label: t("wheel_editor_content_tab_general"), value: "general" },
+    { label: t("wheel_editor_content_tab_success"), value: "success" },
+    { label: t("wheel_editor_content_tab_no_luck"), value: "no_luck" },
+    { label: t("wheel_editor_content_tab_errors"), value: "errors" },
+  ];
 
   const totalProbability = segments.reduce(
     (acc, segment) => acc + parseFloat(segment.probability || 0),
@@ -1774,10 +1777,10 @@ export default function WheelEditor() {
   return (
     <Page
       title={title}
-      backAction={{ content: "Wheels", url: "/app/wheels" }}
+      backAction={{ content: t("nav_wheels"), url: "/app/wheels" }}
       secondaryActions={[
         {
-          content: "Preview",
+          content: t("wheel_editor_preview_title"),
           onAction: () => {
             setPreviewTab("initial");
             setPreviewDevice("desktop");
@@ -1788,10 +1791,10 @@ export default function WheelEditor() {
     >
       <SaveBar open={isDirty}>
         <button variant="primary" onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Kaydediliyor..." : "Kaydet"}
+          {isSaving ? t("saving") : t("save")}
         </button>
         <button onClick={handleDiscard} disabled={isSaving}>
-          Vazgeç
+          {t("discard")}
         </button>
       </SaveBar>
 
@@ -1807,7 +1810,7 @@ export default function WheelEditor() {
         {totalProbability !== 100 && (
           <Layout.Section variant="fullWidth">
             <Banner tone="warning">
-              Total probability is {totalProbability}%. It should ideally be 100%.
+              {t("wheel_editor_total_probability")}: {totalProbability}%
             </Banner>
           </Layout.Section>
         )}
@@ -1817,18 +1820,17 @@ export default function WheelEditor() {
             <Card>
               <BlockStack gap="400">
                 <TextField
-                  label="Wheel name"
+                  label={t("wheel_new_field_title")}
                   value={title}
                   onChange={setTitle}
                   autoComplete="off"
                 />
 
                 <Select
-                  label="Popup behavior"
+                  label={t("wheel_editor_popup_behavior")}
                   options={POPUP_BEHAVIOR_OPTIONS}
                   value={config.popupBehavior}
                   onChange={(value) => handleConfigChange("popupBehavior", value)}
-                  helpText="Choose how the spin wheel interaction works"
                 />
 
               </BlockStack>
@@ -1839,10 +1841,10 @@ export default function WheelEditor() {
                 <InlineStack align="space-between" blockAlign="center">
                   <div>
                     <Text variant="headingMd" as="h2" fontWeight="bold">
-                      Popup Display Rules
+                      {t("wheel_editor_section_popup_rules")}
                     </Text>
                     <Text as="p" tone="subdued">
-                      Adjust the rules for when the popup should be displayed
+                      {t("wheel_editor_popup_behavior")}
                     </Text>
                   </div>
                   <Button
@@ -1870,29 +1872,26 @@ export default function WheelEditor() {
                     <InlineStack align="space-between" blockAlign="center" gap="300">
                       <BlockStack gap="100" style={{ flex: 1, minWidth: 0 }}>
                         <Text as="p" variant="headingSm" fontWeight="semibold">
-                          Add emails to Shopify Customers
-                        </Text>
-                        <Text as="p" tone="subdued">
-                          Create/update customers in Shopify when visitors spin the wheel.
+                          {t("wheel_editor_sync_shopify")}
                         </Text>
                       </BlockStack>
                       <Checkbox
                         labelHidden
-                        label="Add emails to Shopify Customers"
+                        label={t("wheel_editor_sync_shopify")}
                         checked={config.syncToShopifyCustomers}
                         onChange={(checked) => handleConfigChange("syncToShopifyCustomers", checked)}
                       />
                     </InlineStack>
 
                     <Select
-                      label="Trigger condition"
+                      label={t("wheel_editor_trigger_condition")}
                       options={TRIGGER_CONDITION_OPTIONS}
                       value={config.triggerCondition}
                       onChange={(value) => handleConfigChange("triggerCondition", value)}
                     />
                     {config.triggerCondition === "after_delay" && (
                       <Select
-                        label="Delay before showing"
+                        label={t("wheel_editor_delay_seconds")}
                         options={DELAY_BEFORE_SHOWING_OPTIONS}
                         value={config.delaySeconds}
                         onChange={(value) => handleConfigChange("delaySeconds", value)}
@@ -1900,7 +1899,7 @@ export default function WheelEditor() {
                     )}
                     {config.triggerCondition === "after_scroll" && (
                       <TextField
-                        label="Scroll threshold"
+                        label={t("wheel_editor_scroll_threshold")}
                         type="number"
                         value={config.scrollThreshold}
                         onChange={(value) => handleConfigChange("scrollThreshold", value)}
@@ -1915,19 +1914,19 @@ export default function WheelEditor() {
                       </Banner>
                     )}
                     <Select
-                      label="Display on"
+                      label={t("wheel_editor_display_on")}
                       options={DISPLAY_ON_OPTIONS}
                       value={config.displayOn}
                       onChange={(value) => handleConfigChange("displayOn", value)}
                     />
                     <Select
-                      label="Display on days"
+                      label={t("wheel_editor_display_days")}
                       options={DISPLAY_DAYS_OPTIONS}
                       value={config.displayOnDays}
                       onChange={(value) => handleConfigChange("displayOnDays", value)}
                     />
                     <Checkbox
-                      label="Hide on mobile devices"
+                      label={t("wheel_editor_hide_mobile")}
                       checked={config.hideOnMobileDevices}
                       onChange={(checked) => handleConfigChange("hideOnMobileDevices", checked)}
                     />
@@ -1938,27 +1937,25 @@ export default function WheelEditor() {
                   <BlockStack gap="300">
                     <InlineGrid columns={2} gap="300">
                       <Select
-                        label="Discount activation time"
+                        label={t("wheel_editor_discount_activation")}
                         options={DISCOUNT_ACTIVATION_TIME_OPTIONS}
                         value={config.discountActivationTime}
                         onChange={(value) =>
                           handleConfigChange("discountActivationTime", value)
                         }
-                        helpText="When the discount code becomes active"
                       />
                       <Select
-                        label="Discount code expiration"
+                        label={t("wheel_editor_discount_expiration")}
                         options={DISCOUNT_CODE_EXPIRATION_OPTIONS}
                         value={config.discountCodeExpiration}
                         onChange={(value) =>
                           handleConfigChange("discountCodeExpiration", value)
                         }
-                        helpText="When the discount code expires"
                       />
                     </InlineGrid>
 
                     <Select
-                      label="Spin frequency"
+                      label={t("wheel_editor_spin_frequency")}
                       options={SPIN_FREQUENCY_OPTIONS}
                       value={config.spinFrequency}
                       onChange={(value) => handleConfigChange("spinFrequency", value)}
@@ -1969,10 +1966,10 @@ export default function WheelEditor() {
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="center">
-                      <Text as="p">Show trigger button on the side of the screen</Text>
+                      <Text as="p">{t("wheel_editor_side_trigger_enable")}</Text>
                       <Checkbox
                         labelHidden
-                        label="Show trigger button on the side of the screen"
+                        label={t("wheel_editor_side_trigger_enable")}
                         checked={config.showSideTriggerButton}
                         onChange={(checked) =>
                           handleConfigChange("showSideTriggerButton", checked)
@@ -1984,13 +1981,13 @@ export default function WheelEditor() {
                       <BlockStack gap="300">
                         <InlineGrid columns={2} gap="300">
                           <Select
-                            label="Trigger type"
+                            label={t("wheel_editor_side_trigger_type")}
                             options={SIDE_TRIGGER_TYPE_OPTIONS}
                             value={config.sideTriggerType}
                             onChange={(value) => handleConfigChange("sideTriggerType", value)}
                           />
                           <Select
-                            label="Position"
+                            label={t("wheel_editor_side_trigger_position")}
                             options={SIDE_TRIGGER_POSITION_OPTIONS}
                             value={config.sideTriggerPosition}
                             onChange={(value) => handleConfigChange("sideTriggerPosition", value)}
@@ -2008,12 +2005,12 @@ export default function WheelEditor() {
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="center">
                       <InlineStack gap="200" blockAlign="center">
-                        <Text as="p">Show countdown timer after discount is revealed</Text>
+                        <Text as="p">{t("wheel_editor_countdown_enable")}</Text>
                         <Badge tone="info">New</Badge>
                       </InlineStack>
                       <Checkbox
                         labelHidden
-                        label="Show countdown timer after discount is revealed"
+                        label={t("wheel_editor_countdown_enable")}
                         checked={config.showCountdownAfterReveal}
                         onChange={(checked) =>
                           handleConfigChange("showCountdownAfterReveal", checked)
@@ -2024,7 +2021,7 @@ export default function WheelEditor() {
                     {config.showCountdownAfterReveal ? (
                       <BlockStack gap="300">
                         <Select
-                          label="Position"
+                          label={t("wheel_editor_countdown_position")}
                           options={COUNTDOWN_POSITION_OPTIONS}
                           value={config.countdownPosition}
                           onChange={(value) => handleConfigChange("countdownPosition", value)}
@@ -2044,10 +2041,7 @@ export default function WheelEditor() {
                 <InlineStack align="space-between" blockAlign="center">
                   <div>
                     <Text variant="headingMd" as="h2" fontWeight="bold">
-                      Form Fields Configuration
-                    </Text>
-                    <Text as="p" tone="subdued">
-                      Adjust the form fields to be collected from the customer
+                      {t("wheel_editor_section_form_fields")}
                     </Text>
                   </div>
                   <Button
@@ -2072,10 +2066,10 @@ export default function WheelEditor() {
               >
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
                   <InlineStack align="space-between" blockAlign="center">
-                    <Text as="p">Disable All Form Fields</Text>
+                    <Text as="p">{t("wheel_editor_disable_all_fields")}</Text>
                     <Checkbox
                       labelHidden
-                      label="Disable All Form Fields"
+                      label={t("wheel_editor_disable_all_fields")}
                       checked={config.disableAllFormFields}
                       onChange={(checked) => handleConfigChange("disableAllFormFields", checked)}
                     />
@@ -2086,11 +2080,11 @@ export default function WheelEditor() {
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="center">
                       <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
-                        Name Field
+                        {t("wheel_editor_show_name")}
                       </Text>
                       <Checkbox
                         labelHidden
-                        label="Name Field"
+                        label={t("wheel_editor_show_name")}
                         checked={config.showNameField}
                         disabled={config.disableAllFormFields}
                         onChange={(checked) => handleConfigChange("showNameField", checked)}
@@ -2101,7 +2095,7 @@ export default function WheelEditor() {
                       <Box background="bg-surface-secondary" padding="300" borderRadius="200">
                         <InlineGrid columns={2} gap="300">
                           <Select
-                            label="Name field requirement"
+                            label={t("wheel_editor_field_requirement")}
                             options={EMAIL_REQUIREMENT_OPTIONS}
                             value={config.nameFieldRequirement || "required"}
                             onChange={(value) =>
@@ -2109,7 +2103,7 @@ export default function WheelEditor() {
                             }
                           />
                           <TextField
-                            label="Name placeholder text"
+                            label={t("wheel_editor_initial_name_placeholder")}
                             value={config.initialNamePlaceholder}
                             onChange={(value) =>
                               handleConfigChange("initialNamePlaceholder", value)
@@ -2126,11 +2120,11 @@ export default function WheelEditor() {
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="center">
                       <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
-                        Email Field
+                        {t("wheel_editor_show_email")}
                       </Text>
                       <Checkbox
                         labelHidden
-                        label="Email Field"
+                        label={t("wheel_editor_show_email")}
                         checked={config.showEmailField}
                         disabled={config.disableAllFormFields}
                         onChange={(checked) => handleConfigChange("showEmailField", checked)}
@@ -2141,7 +2135,7 @@ export default function WheelEditor() {
                       <Box background="bg-surface-secondary" padding="300" borderRadius="200">
                         <InlineGrid columns={2} gap="300">
                           <Select
-                            label="Email field requirement"
+                            label={t("wheel_editor_field_requirement")}
                             options={EMAIL_REQUIREMENT_OPTIONS}
                             value={config.emailFieldRequirement}
                             onChange={(value) =>
@@ -2149,7 +2143,7 @@ export default function WheelEditor() {
                             }
                           />
                           <TextField
-                            label="Email placeholder text"
+                            label={t("wheel_editor_initial_email_placeholder")}
                             value={config.initialEmailPlaceholder}
                             onChange={(value) =>
                               handleConfigChange("initialEmailPlaceholder", value)
@@ -2166,11 +2160,11 @@ export default function WheelEditor() {
                   <BlockStack gap="300">
                     <InlineStack align="space-between" blockAlign="center">
                       <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
-                        Phone Field
+                        {t("wheel_editor_show_phone")}
                       </Text>
                       <Checkbox
                         labelHidden
-                        label="Phone Field"
+                        label={t("wheel_editor_show_phone")}
                         checked={config.showPhoneField}
                         disabled={config.disableAllFormFields}
                         onChange={(checked) => handleConfigChange("showPhoneField", checked)}
@@ -2181,7 +2175,7 @@ export default function WheelEditor() {
                       <Box background="bg-surface-secondary" padding="300" borderRadius="200">
                         <InlineGrid columns={2} gap="300">
                           <Select
-                            label="Phone field requirement"
+                            label={t("wheel_editor_field_requirement")}
                             options={EMAIL_REQUIREMENT_OPTIONS}
                             value={config.phoneFieldRequirement}
                             onChange={(value) =>
@@ -2189,7 +2183,7 @@ export default function WheelEditor() {
                             }
                           />
                           <TextField
-                            label="Phone placeholder text"
+                            label={t("wheel_editor_initial_phone_placeholder")}
                             value={config.initialPhonePlaceholder}
                             onChange={(value) =>
                               handleConfigChange("initialPhonePlaceholder", value)
@@ -2205,11 +2199,11 @@ export default function WheelEditor() {
                 <Box borderBlockStartWidth="025" borderColor="border" padding="400">
                   <InlineStack align="space-between" blockAlign="center">
                     <Text as="p" tone={config.disableAllFormFields ? "subdued" : undefined}>
-                      Consent Checkbox
+                      {t("wheel_editor_show_consent")}
                     </Text>
                     <Checkbox
                       labelHidden
-                      label="Consent Checkbox"
+                      label={t("wheel_editor_show_consent")}
                       checked={config.showConsentCheckbox}
                       disabled={config.disableAllFormFields}
                       onChange={(checked) => handleConfigChange("showConsentCheckbox", checked)}
@@ -2224,10 +2218,7 @@ export default function WheelEditor() {
                 <InlineStack align="space-between" blockAlign="center">
                   <div>
                     <Text variant="headingMd" as="h2" fontWeight="bold">
-                      Content
-                    </Text>
-                    <Text as="p" tone="subdued">
-                      Edit text content for the popup
+                      {t("wheel_editor_section_content")}
                     </Text>
                   </div>
                   <Button
@@ -2268,25 +2259,25 @@ export default function WheelEditor() {
                     {contentTab === "general" ? (
                       <BlockStack gap="300">
                         <TextField
-                          label="Currency"
+                          label={t("wheel_editor_currency_symbol")}
                           value={config.currencySymbol}
                           onChange={(value) => handleConfigChange("currencySymbol", value)}
                           autoComplete="off"
                         />
                         <TextField
-                          label="Heading"
+                          label={t("wheel_editor_initial_heading")}
                           value={config.initialHeading}
                           onChange={(value) => handleConfigChange("initialHeading", value)}
                           autoComplete="off"
                         />
                         <TextField
-                          label="Subheading"
+                          label={t("wheel_editor_initial_desc")}
                           value={config.initialDescription}
                           onChange={(value) => handleConfigChange("initialDescription", value)}
                           autoComplete="off"
                         />
                         <TextField
-                          label="Email placeholder"
+                          label={t("wheel_editor_initial_email_placeholder")}
                           value={config.initialEmailPlaceholder}
                           onChange={(value) =>
                             handleConfigChange("initialEmailPlaceholder", value)
@@ -2294,7 +2285,7 @@ export default function WheelEditor() {
                           autoComplete="off"
                         />
                         <TextField
-                          label="Button text"
+                          label={t("wheel_editor_initial_cta")}
                           value={config.initialCtaText}
                           onChange={(value) => handleConfigChange("initialCtaText", value)}
                           autoComplete="off"
@@ -2302,13 +2293,13 @@ export default function WheelEditor() {
                         <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
                           <BlockStack gap="300">
                             <TextField
-                              label="Info text"
+                              label={t("wheel_editor_initial_info")}
                               value={config.initialInfoText}
                               onChange={(value) => handleConfigChange("initialInfoText", value)}
                               autoComplete="off"
                             />
                             <TextField
-                              label="Side trigger button text"
+                              label={t("wheel_editor_side_trigger_text")}
                               value={config.sideTriggerButtonText}
                               onChange={(value) => handleConfigChange("sideTriggerButtonText", value)}
                               autoComplete="off"
@@ -2321,34 +2312,33 @@ export default function WheelEditor() {
                     {contentTab === "success" ? (
                       <BlockStack gap="300">
                         <TextField
-                          label="Heading"
+                          label={t("wheel_editor_result_heading")}
                           value={config.resultHeading}
                           onChange={(value) => handleConfigChange("resultHeading", value)}
                           autoComplete="off"
                         />
                         <TextField
-                          label="Subheading"
+                          label={t("wheel_editor_result_desc")}
                           value={config.resultDescription}
                           onChange={(value) => handleConfigChange("resultDescription", value)}
                           autoComplete="off"
                         />
                         <TextField
-                          label="Email sent text"
+                          label={t("wheel_editor_result_email_sent")}
                           value={config.resultEmailSentText}
                           onChange={(value) => handleConfigChange("resultEmailSentText", value)}
-                          helpText="Check out the 'Email' page to enable this setting."
                           autoComplete="off"
                         />
                         <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
                           <InlineGrid columns={2} gap="300">
                             <TextField
-                              label="Copy code"
+                              label={t("wheel_editor_result_copy_code")}
                               value={config.resultCopyCodeLabel}
                               onChange={(value) => handleConfigChange("resultCopyCodeLabel", value)}
                               autoComplete="off"
                             />
                             <TextField
-                              label="Continue shopping"
+                              label={t("wheel_editor_result_continue")}
                               value={config.resultContinueButtonLabel}
                               onChange={(value) =>
                                 handleConfigChange("resultContinueButtonLabel", value)
@@ -2358,13 +2348,13 @@ export default function WheelEditor() {
                           </InlineGrid>
                         </Box>
                         <TextField
-                          label="Minimum spend label"
+                          label={t("wheel_editor_result_min_spend")}
                           value={config.resultMinimumSpendLabel}
                           onChange={(value) => handleConfigChange("resultMinimumSpendLabel", value)}
                           autoComplete="off"
                         />
                         <TextField
-                          label="Expires in label"
+                          label={t("wheel_editor_countdown_text")}
                           value={config.countdownTimerText}
                           onChange={(value) => handleConfigChange("countdownTimerText", value)}
                           autoComplete="off"
@@ -2375,13 +2365,13 @@ export default function WheelEditor() {
                     {contentTab === "no_luck" ? (
                       <BlockStack gap="300">
                         <TextField
-                          label="Heading"
+                          label={t("wheel_editor_no_luck_heading")}
                           value={config.noLuckHeading}
                           onChange={(value) => handleConfigChange("noLuckHeading", value)}
                           autoComplete="off"
                         />
                         <TextField
-                          label="Subheading"
+                          label={t("wheel_editor_no_luck_subheading")}
                           value={config.noLuckSubheading}
                           onChange={(value) => handleConfigChange("noLuckSubheading", value)}
                           autoComplete="off"
@@ -2392,13 +2382,13 @@ export default function WheelEditor() {
                     {contentTab === "errors" ? (
                       <BlockStack gap="300">
                         <TextField
-                          label="Email invalid"
+                          label={t("wheel_editor_error_invalid_email")}
                           value={config.errorEmailInvalid}
                           onChange={(value) => handleConfigChange("errorEmailInvalid", value)}
                           autoComplete="off"
                         />
                         <TextField
-                          label="Email already used"
+                          label={t("wheel_editor_error_already_used")}
                           value={config.errorEmailAlreadyUsed}
                           onChange={(value) => handleConfigChange("errorEmailAlreadyUsed", value)}
                           autoComplete="off"
@@ -2406,7 +2396,7 @@ export default function WheelEditor() {
                         <Box borderBlockStartWidth="025" borderColor="border" paddingBlockStart="300">
                           <BlockStack gap="300">
                             <TextField
-                              label="Frequency limit exceeded"
+                              label={t("wheel_editor_error_limit")}
                               value={config.errorFrequencyLimitExceeded}
                               onChange={(value) =>
                                 handleConfigChange("errorFrequencyLimitExceeded", value)
@@ -2414,13 +2404,13 @@ export default function WheelEditor() {
                               autoComplete="off"
                             />
                             <TextField
-                              label="One time only message"
+                              label={t("wheel_editor_error_one_time")}
                               value={config.errorOneTimeOnly}
                               onChange={(value) => handleConfigChange("errorOneTimeOnly", value)}
                               autoComplete="off"
                             />
                             <TextField
-                              label="Try again later message"
+                              label={t("wheel_editor_error_try_again")}
                               value={config.errorTryAgainLater}
                               onChange={(value) => handleConfigChange("errorTryAgainLater", value)}
                               autoComplete="off"
@@ -2439,10 +2429,7 @@ export default function WheelEditor() {
                 <InlineStack align="space-between" blockAlign="center">
                   <div>
                     <Text variant="headingMd" as="h2" fontWeight="bold">
-                      Colors & Images
-                    </Text>
-                    <Text as="p" tone="subdued">
-                      Adjust the colors and images used in the popup
+                      {t("wheel_editor_section_colors")}
                     </Text>
                   </div>
                   <Button
@@ -2468,7 +2455,7 @@ export default function WheelEditor() {
                 <Box padding="400" paddingBlockStart="0">
                   <InlineGrid columns={3} gap="300">
                     <ColorField
-                      label="Background"
+                      label={t("wheel_editor_bg_color")}
                       value={config.backgroundColor}
                       fallback="#fff8f0"
                       onChange={(value) =>
@@ -2476,7 +2463,7 @@ export default function WheelEditor() {
                       }
                     />
                     <ColorField
-                      label="Heading"
+                      label={t("wheel_editor_heading_color")}
                       value={config.headingColor}
                       fallback="#8b4513"
                       onChange={(value) =>
@@ -2484,7 +2471,7 @@ export default function WheelEditor() {
                       }
                     />
                     <ColorField
-                      label="Text"
+                      label={t("wheel_editor_text_color")}
                       value={config.textColor}
                       fallback="#3e2723"
                       onChange={(value) =>
@@ -2492,7 +2479,7 @@ export default function WheelEditor() {
                       }
                     />
                     <ColorField
-                      label="Button background"
+                      label={t("wheel_editor_btn_bg_color")}
                       value={config.buttonBackgroundColor}
                       fallback="#d2691e"
                       onChange={(value) =>
@@ -2503,7 +2490,7 @@ export default function WheelEditor() {
                       }
                     />
                     <ColorField
-                      label="Button text"
+                      label={t("wheel_editor_btn_text_color")}
                       value={config.buttonTextColor}
                       fallback="#ffffff"
                       onChange={(value) =>
@@ -2525,14 +2512,14 @@ export default function WheelEditor() {
                       {segments.map((segment, index) => (
                         <div key={segment.id}>
                           <ColorField
-                            label={`Slice ${index + 1} background`}
+                            label={`${t("wheel_editor_segment_color")} ${index + 1}`}
                             value={segment.color}
                             fallback="#f6b347"
                             onChange={(value) => handleSegmentColorChange(index, value)}
                           />
                           <div style={{ marginTop: "10px" }}>
                             <ColorField
-                              label={`Slice ${index + 1} text`}
+                              label={`${t("wheel_editor_segment_text_color")} ${index + 1}`}
                               value={segmentTextColors[segment.id] || config.wheelTextColor}
                               fallback="#4a1e00"
                               onChange={(value) =>
@@ -2555,7 +2542,7 @@ export default function WheelEditor() {
 
                       <InlineStack gap="200">
                         <Button onClick={() => backgroundInputRef.current?.click()}>
-                          {config.backgroundImageUrl ? "Change background image" : "Select background image"}
+                          {config.backgroundImageUrl ? t("wheel_editor_add_bg") : t("wheel_editor_add_bg")}
                         </Button>
                         {config.backgroundImageUrl ? (
                           <Button
@@ -2563,7 +2550,7 @@ export default function WheelEditor() {
                             variant="plain"
                             onClick={() => handleConfigChange("backgroundImageUrl", "")}
                           >
-                            Remove background
+                            {t("wheel_editor_remove_bg")}
                           </Button>
                         ) : null}
                       </InlineStack>
@@ -2618,19 +2605,19 @@ export default function WheelEditor() {
                                     variant="plain"
                                     onClick={() => handleConfigChange("logoImageUrl", "")}
                                   >
-                                    Remove logo
+                                    {t("wheel_editor_remove_logo")}
                                   </Button>
-                                  <Button onClick={() => logoInputRef.current?.click()}>Change</Button>
+                                  <Button onClick={() => logoInputRef.current?.click()}>{t("wheel_editor_add_logo")}</Button>
                                 </>
                               ) : (
-                                <Button onClick={() => logoInputRef.current?.click()}>Select logo image</Button>
+                                <Button onClick={() => logoInputRef.current?.click()}>{t("wheel_editor_add_logo")}</Button>
                               )}
                             </InlineStack>
                           </div>
                         </div>
 
                         <Select
-                          label="Position of logo"
+                          label={t("wheel_editor_logo_position")}
                           options={LOGO_POSITION_OPTIONS}
                           value={config.logoPosition}
                           onChange={(value) => handleConfigChange("logoPosition", value)}
@@ -2662,10 +2649,7 @@ export default function WheelEditor() {
                 <InlineStack align="space-between" blockAlign="center">
                   <div>
                     <Text variant="headingMd" as="h2" fontWeight="bold">
-                      Discounts Settings
-                    </Text>
-                    <Text as="p" tone="subdued">
-                      Adjust the discounts settings
+                      {t("wheel_editor_section_discounts")}
                     </Text>
                   </div>
                   <Button
@@ -2749,12 +2733,12 @@ export default function WheelEditor() {
                                   {segment.label || "Untitled"}
                                 </Text>
                                 <Text as="p" tone="subdued">
-                                  {`${segment.value || "Discount item"} • ${formatChance(segment.probability)}`}
+                                  {`${segment.value || "Discount item"} • ${t("wheel_editor_chance", Number(segment.probability || 0).toFixed(1))}`}
                                 </Text>
                               </div>
                               <InlineStack gap="200" blockAlign="center">
                                 <Button size="slim" variant="secondary" onClick={() => openDiscountEditor(index)}>
-                                  Edit
+                                  {t("edit")}
                                 </Button>
                                 <Button
                                   size="slim"
@@ -2776,7 +2760,7 @@ export default function WheelEditor() {
                 <Box padding="400">
                   <InlineStack align="center">
                     <Button icon={PlusIcon} onClick={handleAddDiscountItem}>
-                      Add Discount Item
+                      {t("wheel_editor_add_item")}
                     </Button>
                   </InlineStack>
                 </Box>
@@ -2792,12 +2776,12 @@ export default function WheelEditor() {
               <BlockStack gap="300">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text variant="headingMd" as="h2" fontWeight="bold">
-                    Wheel Status
+                    {t("wheel_editor_status_active")}
                   </Text>
                   {isActive ? (
-                    <Badge tone="success">Active</Badge>
+                    <Badge tone="success">{t("active")}</Badge>
                   ) : (
-                    <Badge tone="attention">Draft</Badge>
+                    <Badge tone="attention">{t("draft")}</Badge>
                   )}
                 </InlineStack>
 
@@ -2805,8 +2789,8 @@ export default function WheelEditor() {
                   labelHidden
                   label="Wheel status"
                   options={[
-                    { label: "Active", value: "active" },
-                    { label: "Draft", value: "draft" },
+                    { label: t("wheel_editor_status_active"), value: "active" },
+                    { label: t("draft"), value: "draft" },
                   ]}
                   value={isActive ? "active" : "draft"}
                   onChange={handleStatusChange}
@@ -2818,7 +2802,7 @@ export default function WheelEditor() {
               <Box padding="400" paddingBlockEnd="300">
                 <InlineStack align="space-between" blockAlign="center">
                   <Text variant="headingMd" as="h2" fontWeight="bold">
-                    Preview
+                    {t("wheel_editor_preview_title")}
                   </Text>
                   <div
                     style={{
@@ -2902,7 +2886,7 @@ export default function WheelEditor() {
       <Modal
         open={previewModalOpen}
         onClose={handleClosePreviewModal}
-        title="Preview"
+        title={t("wheel_editor_preview_title")}
         size="large"
       >
         <Modal.Section>
@@ -2928,9 +2912,9 @@ export default function WheelEditor() {
       <Modal
         open={editingDiscountIndex !== null && Boolean(discountDraft)}
         onClose={closeDiscountEditor}
-        title={`Edit Discount ${(editingDiscountIndex ?? 0) + 1}`}
+        title={`${t("wheel_editor_section_discounts")} ${(editingDiscountIndex ?? 0) + 1}`}
         primaryAction={{
-          content: "Done",
+          content: t("save"),
           onAction: handleSaveDiscountItem,
         }}
       >
@@ -2938,7 +2922,7 @@ export default function WheelEditor() {
           {discountDraft ? (
             <BlockStack gap="300">
               <TextField
-                label="Display Title"
+                label={t("wheel_editor_win_heading")}
                 value={discountDraft.displayTitle}
                 onChange={(value) => handleDiscountDraftChange("displayTitle", value)}
                 autoComplete="off"
@@ -2946,14 +2930,14 @@ export default function WheelEditor() {
 
               <InlineGrid columns={2} gap="300">
                 <Select
-                  label="Discount Type"
+                  label={t("wheel_editor_discount_type")}
                   options={DISCOUNT_TYPE_OPTIONS}
                   value={discountDraft.discountType}
                   onChange={(value) => handleDiscountDraftChange("discountType", value)}
                 />
                 <TextField
                   type="number"
-                  label="Discount Amount"
+                  label={t("wheel_editor_discount_amount")}
                   value={discountDraft.discountAmount}
                   suffix={discountDraft.discountType === "percentage" ? "%" : undefined}
                   prefix={discountDraft.discountType === "fixed_amount" ? "$" : undefined}
@@ -2969,7 +2953,7 @@ export default function WheelEditor() {
               <InlineGrid columns={2} gap="300">
                 <TextField
                   type="number"
-                  label="Minimum Purchase"
+                  label={t("wheel_editor_min_purchase")}
                   prefix="$"
                   value={discountDraft.minimumPurchase}
                   onChange={(value) => handleDiscountDraftChange("minimumPurchase", value)}
@@ -2977,7 +2961,7 @@ export default function WheelEditor() {
                 />
                 <TextField
                   type="number"
-                  label="Probability Weight"
+                  label={t("wheel_editor_probability")}
                   value={discountDraft.probabilityWeight}
                   onChange={(value) => handleDiscountDraftChange("probabilityWeight", value)}
                   autoComplete="off"
@@ -2985,7 +2969,7 @@ export default function WheelEditor() {
               </InlineGrid>
 
               <Checkbox
-                label="Limit number of times this prize can be won"
+                label={t("wheel_editor_limit_wins")}
                 checked={discountDraft.limitPrizeWins}
                 onChange={(checked) => handleDiscountDraftChange("limitPrizeWins", checked)}
               />
@@ -2994,7 +2978,7 @@ export default function WheelEditor() {
                 <BlockStack gap="200">
                   <TextField
                     type="number"
-                    label="Maximum Winners"
+                    label={t("wheel_editor_max_winners")}
                     value={discountDraft.maximumWinners}
                     onChange={(value) => handleDiscountDraftChange("maximumWinners", value)}
                     autoComplete="off"
@@ -3005,10 +2989,10 @@ export default function WheelEditor() {
                   </Text>
                   <InlineStack gap="300" blockAlign="center">
                     <Text as="p" tone="subdued">
-                      {`Current winners: ${discountDraft.currentWinners || "0"}`}
+                      {`${t("wheel_editor_current_winners")}: ${discountDraft.currentWinners || "0"}`}
                     </Text>
                     <Button variant="plain" tone="critical" onClick={handleResetCurrentWinners}>
-                      Reset
+                      {t("wheel_editor_reset_winners")}
                     </Button>
                   </InlineStack>
                 </BlockStack>
@@ -3027,7 +3011,7 @@ export default function WheelEditor() {
 
               <BlockStack gap="200">
                 <Checkbox
-                  label="Use custom win screen for this discount"
+                  label={t("wheel_editor_custom_win_screen")}
                   checked={discountDraft.customWinScreen}
                   onChange={(checked) => handleDiscountDraftChange("customWinScreen", checked)}
                 />
@@ -3040,13 +3024,13 @@ export default function WheelEditor() {
                 {discountDraft.customWinScreen ? (
                   <>
                     <TextField
-                      label="Win screen heading"
+                      label={t("wheel_editor_win_heading")}
                       value={discountDraft.winScreenHeading}
                       onChange={(value) => handleDiscountDraftChange("winScreenHeading", value)}
                       autoComplete="off"
                     />
                     <TextField
-                      label="Win screen description"
+                      label={t("wheel_editor_win_desc")}
                       value={discountDraft.winScreenDescription}
                       onChange={(value) =>
                         handleDiscountDraftChange("winScreenDescription", value)
@@ -3056,13 +3040,13 @@ export default function WheelEditor() {
                     />
                     <InlineGrid columns={2} gap="300">
                       <TextField
-                        label="CTA button label"
+                        label={t("wheel_editor_cta_label")}
                         value={discountDraft.ctaButtonLabel}
                         onChange={(value) => handleDiscountDraftChange("ctaButtonLabel", value)}
                         autoComplete="off"
                       />
                       <TextField
-                        label="CTA button URL"
+                        label={t("wheel_editor_cta_url")}
                         value={discountDraft.ctaButtonUrl}
                         onChange={(value) => handleDiscountDraftChange("ctaButtonUrl", value)}
                         autoComplete="off"
@@ -3076,31 +3060,28 @@ export default function WheelEditor() {
                 <InlineStack align="space-between" blockAlign="center">
                   <div>
                     <Text as="h4" variant="headingSm" fontWeight="semibold">
-                      Combines With
-                    </Text>
-                    <Text as="p" tone="subdued">
-                      Choose which discount types this discount can be combined with.
+                      {t("wheel_editor_combine_discounts")}
                     </Text>
                   </div>
                   <Button variant="plain" onClick={handleApplyCombinesToAll}>
-                    Apply to all items
+                    {t("wheel_editor_apply_all")}
                   </Button>
                 </InlineStack>
               </Box>
 
               <InlineStack gap="400">
                 <Checkbox
-                  label="Order discounts"
+                  label={t("wheel_editor_combine_order")}
                   checked={discountDraft.combineOrderDiscounts}
                   onChange={(checked) => handleDiscountDraftChange("combineOrderDiscounts", checked)}
                 />
                 <Checkbox
-                  label="Product discounts"
+                  label={t("wheel_editor_combine_product")}
                   checked={discountDraft.combineProductDiscounts}
                   onChange={(checked) => handleDiscountDraftChange("combineProductDiscounts", checked)}
                 />
                 <Checkbox
-                  label="Shipping discounts"
+                  label={t("wheel_editor_combine_shipping")}
                   checked={discountDraft.combineShippingDiscounts}
                   onChange={(checked) => handleDiscountDraftChange("combineShippingDiscounts", checked)}
                 />

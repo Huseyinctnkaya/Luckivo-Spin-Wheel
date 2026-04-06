@@ -12,6 +12,7 @@ import {
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
@@ -139,6 +140,7 @@ export default function ImportExportPage() {
   const [file, setFile] = useState(null);
   const [importStatus, setImportStatus] = useState(null);
   const lastExportRef = useRef(null);
+  const { t } = useLanguage();
 
   const isExporting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "export";
   const isImporting = fetcher.state !== "idle" && fetcher.formData?.get("intent") === "import";
@@ -197,20 +199,20 @@ export default function ImportExportPage() {
   };
 
   return (
-    <Page title="Import & Export" backAction={{ url: "/app" }}>
+    <Page title={t("import_export_title")} backAction={{ url: "/app" }}>
       <BlockStack gap="500">
         {/* Export */}
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2" fontWeight="bold">
-              Export Settings
+              {t("export_title")}
             </Text>
             <Text tone="subdued">
-              Download a backup of all your campaigns, active campaign settings, and custom code.
+              {t("export_desc")}
             </Text>
             <div>
               <Button variant="primary" onClick={handleExport} loading={isExporting}>
-                Export Settings to JSON
+                {t("export_btn")}
               </Button>
             </div>
           </BlockStack>
@@ -220,15 +222,13 @@ export default function ImportExportPage() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2" fontWeight="bold">
-              Import Settings
+              {t("import_title")}
             </Text>
             <Text tone="subdued">
-              Upload a previously exported JSON file to restore your settings.
+              {t("import_desc")}
             </Text>
             <Banner tone="warning">
-              <p>
-                Importing will overwrite existing campaigns with the same ID and replace your current custom code.
-              </p>
+              <p>{t("import_warning")}</p>
             </Banner>
 
             <DropZone
@@ -240,23 +240,21 @@ export default function ImportExportPage() {
               {file ? (
                 <DropZone.FileUpload actionHint={file.name} />
               ) : (
-                <DropZone.FileUpload actionHint="Accepts .json" />
+                <DropZone.FileUpload actionHint={t("import_drop_hint")} />
               )}
             </DropZone>
 
             {file && (
               <div>
                 <Button variant="primary" onClick={handleImport} loading={isImporting}>
-                  Import Settings
+                  {t("import_btn")}
                 </Button>
               </div>
             )}
 
             {importStatus === "done" && (
               <Banner tone="success">
-                <p>
-                  Successfully imported {fetcher.data?.imported} campaign(s).
-                </p>
+                <p>{t("import_success", fetcher.data?.imported)}</p>
               </Banner>
             )}
 

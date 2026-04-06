@@ -21,6 +21,7 @@ import {
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { useState, useCallback } from "react";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function computeDelta(curr, prev) {
   if (prev === 0) return curr > 0 ? 100 : 0;
@@ -255,6 +256,7 @@ export default function AnalyticsPage() {
 
   const [, setSearchParams] = useSearchParams();
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const { t } = useLanguage();
 
   const toggleDatePicker = useCallback(
     () => setDatePickerOpen((v) => !v),
@@ -279,10 +281,10 @@ export default function AnalyticsPage() {
   };
 
   const dayOptions = [
-    { content: "7 days", onAction: () => handleDaysChange(7), active: days === 7 },
-    { content: "14 days", onAction: () => handleDaysChange(14), active: days === 14 },
-    { content: "30 days", onAction: () => handleDaysChange(30), active: days === 30 },
-    { content: "90 days", onAction: () => handleDaysChange(90), active: days === 90 },
+    { content: t("dashboard_7days"), onAction: () => handleDaysChange(7), active: days === 7 },
+    { content: t("dashboard_14days"), onAction: () => handleDaysChange(14), active: days === 14 },
+    { content: t("dashboard_30days"), onAction: () => handleDaysChange(30), active: days === 30 },
+    { content: t("dashboard_90days"), onAction: () => handleDaysChange(90), active: days === 90 },
   ];
 
   const titleStyle = {
@@ -291,14 +293,14 @@ export default function AnalyticsPage() {
   };
 
   const stats = [
-    { label: "Popups Displayed", value: totalImpressions, tooltip: "Number of times the spin wheel popup was shown.", delta: deltas.impressions },
-    { label: "Forms Submitted", value: totalSpins, tooltip: "Number of wheel spins completed by visitors.", delta: deltas.spins },
-    { label: "Emails Collected", value: emailsCollected, tooltip: "Number of emails collected from visitors.", delta: deltas.emails },
-    { label: "Conversions", value: `${conversionRate}%`, tooltip: "Percentage of popups that resulted in a spin.", delta: deltas.conversion, isConversionDelta: true },
+    { label: t("analytics_stat_popups"), value: totalImpressions, tooltip: t("dashboard_tooltip_popups"), delta: deltas.impressions },
+    { label: t("analytics_stat_forms"), value: totalSpins, tooltip: t("dashboard_tooltip_forms"), delta: deltas.spins },
+    { label: t("analytics_stat_emails"), value: emailsCollected, tooltip: t("dashboard_tooltip_emails"), delta: deltas.emails },
+    { label: t("analytics_stat_conversions"), value: `${conversionRate}%`, tooltip: t("dashboard_tooltip_conversions"), delta: deltas.conversion, isConversionDelta: true },
   ];
 
   return (
-    <Page title="Analytics" backAction={{ url: "/app" }}>
+    <Page title={t("analytics_title")} backAction={{ url: "/app" }}>
       <BlockStack gap="500">
         {/* Stats Bar */}
         <div
@@ -393,9 +395,9 @@ export default function AnalyticsPage() {
         <Card>
           <BlockStack gap="300">
             <Text variant="headingMd" as="h2" fontWeight="bold">
-              Daily Activity
+              {t("analytics_daily_activity")}
             </Text>
-            <DailyChart data={dailyData} />
+            <DailyChart data={dailyData} t={t} />
           </BlockStack>
         </Card>
 
@@ -403,25 +405,25 @@ export default function AnalyticsPage() {
         {wheelPerformance.length === 0 ? (
           <Card>
             <EmptyState
-              heading="No wheels yet"
-              action={{ content: "Create Wheel", url: "/app/wheels/new" }}
+              heading={t("analytics_no_wheels_heading")}
+              action={{ content: t("analytics_no_wheels_cta"), url: "/app/wheels/new" }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
-              <p>Create a wheel to start tracking performance.</p>
+              <p>{t("analytics_no_wheels_desc")}</p>
             </EmptyState>
           </Card>
         ) : (
           <Card>
             <BlockStack gap="300">
               <Text variant="headingMd" as="h2" fontWeight="bold">
-                Wheel Performance
+                {t("analytics_wheel_performance")}
               </Text>
               <DataTable
                 columnContentTypes={["text", "text", "numeric", "numeric", "numeric"]}
-                headings={["Wheel", "Status", "Impressions", "Spins", "Conversion Rate"]}
+                headings={[t("analytics_col_wheel"), t("analytics_col_status"), t("analytics_col_impressions"), t("analytics_col_spins"), t("analytics_col_conversion")]}
                 rows={wheelPerformance.map((wheel) => [
                   <Text variant="bodyMd" fontWeight="bold" as="span" key={wheel.id}>{wheel.title}</Text>,
-                  wheel.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="attention">Draft</Badge>,
+                  wheel.isActive ? <Badge tone="success">{t("active")}</Badge> : <Badge tone="attention">{t("draft")}</Badge>,
                   wheel.impressions,
                   wheel.spins,
                   `${wheel.conversionRate}%`,
@@ -435,18 +437,18 @@ export default function AnalyticsPage() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2" fontWeight="bold">
-              Prize Distribution
+              {t("analytics_prize_distribution")}
             </Text>
             {prizes.length > 0 ? (
               <DataTable
                 columnContentTypes={["text", "numeric", "numeric"]}
-                headings={["Prize", "Times Won", "Percentage"]}
+                headings={[t("analytics_col_prize"), t("analytics_col_times_won"), t("analytics_col_percentage")]}
                 rows={prizes.map((p) => [p.prize, p.count, `${p.percentage}%`])}
                 totals={["", totalSpins, "100%"]}
                 showTotalsInFooter
               />
             ) : (
-              <Text tone="subdued">No spin data for this period.</Text>
+              <Text tone="subdued">{t("analytics_no_spin_data")}</Text>
             )}
           </BlockStack>
         </Card>
@@ -456,11 +458,11 @@ export default function AnalyticsPage() {
           <Card>
             <BlockStack gap="300">
               <Text variant="headingMd" as="h2" fontWeight="bold">
-                Recent Activity
+                {t("analytics_recent_activity")}
               </Text>
               <DataTable
                 columnContentTypes={["text", "text", "text", "text", "text"]}
-                headings={["Wheel", "Email", "Prize Won", "Coupon Code", "Date"]}
+                headings={[t("analytics_col_wheel"), t("analytics_col_email"), t("analytics_col_prize_won"), t("analytics_col_coupon"), t("analytics_col_date")]}
                 rows={recentSpins.map((spin) => [
                   spin.wheelTitle,
                   spin.customerEmail,
@@ -528,9 +530,9 @@ function StatCell({ stat, titleStyle }) {
   );
 }
 
-function DailyChart({ data }) {
+function DailyChart({ data, t }) {
   if (!data || data.length === 0) {
-    return <Text tone="subdued">No activity data for this period.</Text>;
+    return <Text tone="subdued">{t("analytics_no_activity")}</Text>;
   }
 
   const maxValue = Math.max(...data.flatMap((d) => [d.impressions, d.spins]), 1);
@@ -624,11 +626,11 @@ function DailyChart({ data }) {
       <div style={{ display: "flex", gap: "20px", justifyContent: "center", marginTop: "4px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div style={{ width: "12px", height: "10px", borderRadius: "2px", background: "#c4b5fd" }} />
-          <Text variant="bodySm" tone="subdued">Impressions</Text>
+          <Text variant="bodySm" tone="subdued">{t("analytics_legend_impressions")}</Text>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div style={{ width: "12px", height: "10px", borderRadius: "2px", background: "#6c5ce7" }} />
-          <Text variant="bodySm" tone="subdued">Spins</Text>
+          <Text variant="bodySm" tone="subdued">{t("analytics_legend_spins")}</Text>
         </div>
       </div>
     </div>
