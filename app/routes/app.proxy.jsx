@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import { authenticate, unauthenticated } from "../shopify.server";
 import db from "../db.server";
+import { isShopEntitled } from "../entitlement.server";
 import { sendDiscountEmail } from "../email.server";
 
 function toBoolean(value, fallback = false) {
@@ -45,6 +46,13 @@ export const loader = async ({ request }) => {
 
         if (!session) return json({ error: "Unauthorized" }, { status: 401, headers: noStoreHeaders });
 
+        // Deneme bitmiş ve abonelik yoksa çark vitrinde yayından kalkar.
+        // Storefront tarafı boş `wheel` alanını zaten sessizce yok sayıyor
+        // (lucky_wheel.js), o yüzden hata yerine boş yanıt dönüyoruz.
+        if (!(await isShopEntitled(session.shop))) {
+            return json({ wheel: null, customCode: "" }, { headers: noStoreHeaders });
+        }
+
         const { pathname } = new URL(request.url);
 
         // Subpath: apps/wheel-proxy/active-wheel
@@ -77,6 +85,12 @@ export const action = async ({ request }) => {
         const { session } = await authenticate.public.appProxy(request);
 
         if (!session) return json({ error: "Unauthorized" }, { status: 401 });
+
+        // Loader çarkı zaten gizliyor; bu kontrol doğrudan endpoint'e atılan
+        // istekler için ikinci savunma hattı (spin, finalize-spin, impression).
+        if (!(await isShopEntitled(session.shop))) {
+            return json({ error: "Subscription required" }, { status: 403 });
+        }
 
         const { pathname } = new URL(request.url);
 

@@ -12,5 +12,11 @@ export const action = async ({ request }) => {
     await db.session.deleteMany({ where: { shop } });
   }
 
+  // Kaldırma aboneliği de sonlandırır. isPaid sıfırlanmazsa yeniden kuran
+  // mağaza eski "ödenmiş" bayrağını devralıp çarkı bedava çalıştırırdı.
+  // installedAt'e bilerek dokunmuyoruz: her yeniden kurulumda taze deneme
+  // vermek, kaldır-kur döngüsüyle sonsuz ücretsiz kullanım demek olurdu.
+  await db.shop.updateMany({ where: { shop }, data: { isPaid: false } });
+
   return new Response();
 };

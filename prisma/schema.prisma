@@ -79,6 +79,11 @@ model Shop {
   id          String   @id @default(uuid())
   shop        String   @unique
   installedAt DateTime @default(now())
+  // Aboneliğin önbelleklenmiş hali. Storefront proxy'si her sayfa
+  // görüntülemesinde yetki kontrolü yapıyor; Shopify'a istek atmamak için
+  // buradan okunuyor. Admin yüklemesi ve app_subscriptions/update
+  // webhook'u ile güncel tutulur.
+  isPaid      Boolean  @default(false)
 }
 
 model CustomCode {

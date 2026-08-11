@@ -8,14 +8,13 @@ import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import polarisFixes from "../styles/polaris-fixes.css?url";
 import { authenticate, PLANS } from "../shopify.server";
 import db from "../db.server";
+import { getTrialDaysRemaining } from "../entitlement.server";
 import { LanguageProvider, useLanguage } from "../i18n/LanguageContext";
 
 export const links = () => [
   { rel: "stylesheet", href: polarisStyles },
   { rel: "stylesheet", href: polarisFixes },
 ];
-
-const TRIAL_DAYS = 7;
 
 const getBillingIsTest = () => {
   const value = process.env.SHOPIFY_BILLING_TEST?.toLowerCase();
@@ -38,17 +37,15 @@ export const loader = async ({ request }) => {
   );
   const isPaid = billingChecks.some((c) => c.hasActivePayment);
 
-  // Ensure shop install date is tracked
-  await db.shop.upsert({
+  // Kurulum tarihini kaydet ve isPaid'i tazele: storefront proxy'si yetkiyi
+  // Shopify'a sormak yerine bu kayıttan okuyor.
+  const shopRecord = await db.shop.upsert({
     where: { shop: session.shop },
-    create: { shop: session.shop },
-    update: {},
+    create: { shop: session.shop, isPaid },
+    update: { isPaid },
   });
 
-  const shopRecord = await db.shop.findUnique({ where: { shop: session.shop } });
-  const daysSinceInstall =
-    (Date.now() - shopRecord.installedAt.getTime()) / (1000 * 60 * 60 * 24);
-  const trialDaysRemaining = Math.max(0, Math.ceil(TRIAL_DAYS - daysSinceInstall));
+  const trialDaysRemaining = getTrialDaysRemaining(shopRecord.installedAt);
   const trialExpired = !isPaid && trialDaysRemaining === 0;
 
   // Trial durumu burada yönlendirmeye çevrilmiyor: karar render katmanında
