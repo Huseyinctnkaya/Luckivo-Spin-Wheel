@@ -35,6 +35,7 @@ import {
 } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { DEFAULT_SYNC_TO_SHOPIFY_CUSTOMERS } from "../wheel-defaults";
 import { useLanguage } from "../i18n/LanguageContext";
 
 const WHEEL_STYLE_OPTIONS = [
@@ -534,7 +535,10 @@ export default function WheelEditor() {
       "every_day",
     ),
     hideOnMobileDevices: toBoolean(parsedConfig.hideOnMobileDevices, false),
-    syncToShopifyCustomers: toBoolean(parsedConfig.syncToShopifyCustomers, true),
+    syncToShopifyCustomers: toBoolean(
+      parsedConfig.syncToShopifyCustomers,
+      DEFAULT_SYNC_TO_SHOPIFY_CUSTOMERS,
+    ),
     discountActivationTime: getValidOptionValue(
       DISCOUNT_ACTIVATION_TIME_OPTIONS,
       parsedConfig.discountActivationTime,

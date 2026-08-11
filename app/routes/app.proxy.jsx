@@ -2,6 +2,7 @@ import { json } from "@remix-run/node";
 import { authenticate, unauthenticated } from "../shopify.server";
 import db from "../db.server";
 import { isShopEntitled } from "../entitlement.server";
+import { DEFAULT_SYNC_TO_SHOPIFY_CUSTOMERS } from "../wheel-defaults";
 import { sendDiscountEmail } from "../email.server";
 
 function toBoolean(value, fallback = false) {
@@ -113,7 +114,10 @@ export const action = async ({ request }) => {
 
             const wheelSettings = parseWheelSettings(wheel.config);
 
-            const syncToShopifyCustomers = toBoolean(wheelSettings.syncToShopifyCustomers, false);
+            const syncToShopifyCustomers = toBoolean(
+                wheelSettings.syncToShopifyCustomers,
+                DEFAULT_SYNC_TO_SHOPIFY_CUSTOMERS,
+            );
             const rawEmail = String(email || "").trim();
             const normalizedEmail = rawEmail.toLowerCase();
 
@@ -144,7 +148,7 @@ export const action = async ({ request }) => {
                         consentAccepted,
                     });
                 } catch (syncError) {
-                    console.error("Customer sync failed:", syncError);
+                    logCustomerSyncFailure(syncError);
                 }
             }
 
@@ -216,7 +220,10 @@ export const action = async ({ request }) => {
             }
 
             const wheelSettings = parseWheelSettings(spin.wheel?.config);
-            const syncToShopifyCustomers = toBoolean(wheelSettings.syncToShopifyCustomers, false);
+            const syncToShopifyCustomers = toBoolean(
+                wheelSettings.syncToShopifyCustomers,
+                DEFAULT_SYNC_TO_SHOPIFY_CUSTOMERS,
+            );
             const rawEmail = String(body?.email || "").trim();
             const normalizedEmail = rawEmail.toLowerCase();
             const rawName = String(body?.name || "").trim();
@@ -245,7 +252,7 @@ export const action = async ({ request }) => {
                         consentAccepted,
                     });
                 } catch (syncError) {
-                    console.error("Customer sync failed:", syncError);
+                    logCustomerSyncFailure(syncError);
                 }
             }
 
@@ -364,9 +371,33 @@ function flattenUserErrors(userErrors) {
         .join("; ");
 }
 
-function isMarketingFieldError(message) {
+function isMissingCustomerScopeError(message) {
     const lower = String(message || "").toLowerCase();
-    return lower.includes("acceptsmarketing") || lower.includes("marketing");
+    return (
+        lower.includes("access denied") ||
+        lower.includes("not approved to access") ||
+        lower.includes("required access")
+    );
+}
+
+/**
+ * Müşteri senkronu hatası çarkın dönmesini engellememeli, ama sessizce de
+ * kaybolmamalı: izin eksikliği merchant'ın aksiyon alması gereken bir durum,
+ * bunu jenerik bir hata satırının içinde bırakmıyoruz.
+ */
+function logCustomerSyncFailure(error) {
+    const message = String(error?.message || error);
+
+    if (isMissingCustomerScopeError(message)) {
+        console.error(
+            "Customer sync failed: missing read_customers/write_customers scope. " +
+                "The merchant needs to re-authorize the app.",
+            message,
+        );
+        return;
+    }
+
+    console.error("Customer sync failed:", error);
 }
 
 async function runAdminGraphql(admin, query, variables) {
@@ -428,63 +459,43 @@ async function createShopifyCustomer(admin, customerPayload) {
         tags.push("Luckivo Consent");
     }
 
-    const baseInput = {
+    const input = {
         email: customerPayload.email,
         tags,
     };
 
-    if (firstName) baseInput.firstName = firstName;
-    if (lastName) baseInput.lastName = lastName;
-    if (customerPayload.phone) baseInput.phone = customerPayload.phone;
+    if (firstName) input.firstName = firstName;
+    if (lastName) input.lastName = lastName;
+    if (customerPayload.phone) input.phone = customerPayload.phone;
     if (customerPayload.consentAccepted) {
-        baseInput.acceptsMarketing = true;
+        // `acceptsMarketing` 2022-10'da kaldırıldı; pazarlama izni artık bu
+        // nesneyle veriliyor. Ziyaretçi formdaki kutuyu kendi işaretlediği
+        // için tek adımlı onay (SINGLE_OPT_IN) doğru seviye.
+        input.emailMarketingConsent = {
+            marketingState: "SUBSCRIBED",
+            marketingOptInLevel: "SINGLE_OPT_IN",
+            consentUpdatedAt: new Date().toISOString(),
+        };
     }
 
-    const attempts = [baseInput];
-    if (baseInput.acceptsMarketing) {
-        const fallbackInput = { ...baseInput };
-        delete fallbackInput.acceptsMarketing;
-        attempts.push(fallbackInput);
-    }
+    const payload = await runAdminGraphql(admin, mutation, { input });
+    const result = payload?.data?.customerCreate;
+    const userErrorMessage = flattenUserErrors(result?.userErrors);
 
-    for (let index = 0; index < attempts.length; index += 1) {
-        const input = attempts[index];
-        const canRetryWithoutMarketing =
-            index < attempts.length - 1 && Object.prototype.hasOwnProperty.call(input, "acceptsMarketing");
-
-        try {
-            const payload = await runAdminGraphql(admin, mutation, { input });
-            const result = payload?.data?.customerCreate;
-            const userErrors = result?.userErrors || [];
-            const userErrorMessage = flattenUserErrors(userErrors);
-
-            if (userErrorMessage) {
-                const lowerMessage = userErrorMessage.toLowerCase();
-                if (
-                    lowerMessage.includes("already exists") ||
-                    lowerMessage.includes("has already been taken")
-                ) {
-                    return null;
-                }
-
-                if (canRetryWithoutMarketing && isMarketingFieldError(userErrorMessage)) {
-                    continue;
-                }
-
-                throw new Error(userErrorMessage);
-            }
-
-            return result?.customer || null;
-        } catch (error) {
-            const message = String(error?.message || "");
-            if (canRetryWithoutMarketing && isMarketingFieldError(message)) {
-                continue;
-            }
-            throw error;
+    if (userErrorMessage) {
+        const lowerMessage = userErrorMessage.toLowerCase();
+        // Aynı e-posta bu arada oluşturulmuşsa yarış durumudur, hata değil.
+        if (
+            lowerMessage.includes("already exists") ||
+            lowerMessage.includes("has already been taken")
+        ) {
+            return null;
         }
+
+        throw new Error(userErrorMessage);
     }
 
-    return null;
+    return result?.customer || null;
 }
 
 async function syncSpinCustomerToShopify({ shop, email, name, phone, consentAccepted }) {
