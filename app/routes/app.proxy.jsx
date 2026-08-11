@@ -63,6 +63,10 @@ export const loader = async ({ request }) => {
 
         return json({ error: "Not Found" }, { status: 404, headers: noStoreHeaders });
     } catch (error) {
+        // appProxy() signature doğrulaması başarısız olduğunda Response fırlatır.
+        // Onu 500'e çevirmeyelim; olduğu gibi (401) geçsin.
+        if (error instanceof Response) throw error;
+
         console.error("App proxy loader failed:", error);
         return json({ error: "Proxy loader failed" }, { status: 500, headers: { "Cache-Control": "no-store" } });
     }
@@ -298,6 +302,8 @@ export const action = async ({ request }) => {
 
         return json({ error: "Not Found" }, { status: 404 });
     } catch (error) {
+        if (error instanceof Response) throw error;
+
         console.error("App proxy action failed:", error);
         return json({ error: "Proxy action failed" }, { status: 500 });
     }
