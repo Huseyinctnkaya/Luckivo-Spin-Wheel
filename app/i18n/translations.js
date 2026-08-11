@@ -31,6 +31,13 @@ const en = {
   trial_expired_desc: "Upgrade to Premium to keep using Luckivo Spin Wheel.",
   trial_upgrade_cta: "Upgrade now — $3.99/mo",
 
+  // Trial ended lock screen
+  lock_title: "Thanks for trying Luckivo",
+  lock_desc: "Your 7-day free trial has ended. Subscribe to Premium to unlock your wheels again and pick up right where you left off.",
+  lock_reassure: "Nothing has been deleted — your wheels, subscribers and stats are all waiting for you.",
+  lock_cta: "Subscribe now — $3.99/mo",
+  lock_footnote: "Cancel anytime, no commitment.",
+
   // Dashboard
   dashboard_title: "Luckivo - Spin Wheel Dashboard",
   dashboard_popups_displayed: "Popups Displayed",
@@ -356,6 +363,13 @@ const tr = {
   trial_expired_title: "Ücretsiz denemeniz sona erdi",
   trial_expired_desc: "Luckivo Spin Wheel'i kullanmaya devam etmek için Premium'a yükseltin.",
   trial_upgrade_cta: "Şimdi yükselt — $3.99/ay",
+
+  // Deneme bitti kilit ekranı
+  lock_title: "Luckivo'yu denediğiniz için teşekkürler",
+  lock_desc: "7 günlük ücretsiz denemeniz sona erdi. Premium'a abone olarak çarklarınızı yeniden açabilir, kaldığınız yerden devam edebilirsiniz.",
+  lock_reassure: "Hiçbir şey silinmedi — çarklarınız, aboneleriniz ve istatistikleriniz sizi bekliyor.",
+  lock_cta: "Şimdi abone ol — $3.99/ay",
+  lock_footnote: "İstediğiniz zaman iptal edebilirsiniz, taahhüt yok.",
 
   // Dashboard
   dashboard_title: "Luckivo - Çark Paneli",

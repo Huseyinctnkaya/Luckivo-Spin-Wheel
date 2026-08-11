@@ -1,5 +1,6 @@
 import { json } from "@remix-run/node";
-import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
+import { Link, Outlet, useLoaderData, useLocation, useRouteError } from "@remix-run/react";
+import { BlockStack, Button, Card, Page, Text } from "@shopify/polaris";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
@@ -24,10 +25,7 @@ const getBillingIsTest = () => {
 };
 
 export const loader = async ({ request }) => {
-  // redirect'i buradan alıyoruz: Remix'in düz redirect'i aksine embedded
-  // parametreleri (shop, host) hedefe taşır. Düz redirect kullanılırsa
-  // /app/plans parametresiz yüklenir ve authenticate.admin() login'e atar.
-  const { billing, session, redirect } = await authenticate.admin(request);
+  const { billing, session } = await authenticate.admin(request);
   const isTest = getBillingIsTest();
 
   // Check billing status without forcing a redirect
@@ -53,12 +51,9 @@ export const loader = async ({ request }) => {
   const trialDaysRemaining = Math.max(0, Math.ceil(TRIAL_DAYS - daysSinceInstall));
   const trialExpired = !isPaid && trialDaysRemaining === 0;
 
-  // Trial bittiyse ve ödeme yoksa → plans sayfasına yönlendir (plans sayfası hariç)
-  const url = new URL(request.url);
-  if (trialExpired && !url.pathname.startsWith("/app/plans")) {
-    return redirect("/app/plans");
-  }
-
+  // Trial durumu burada yönlendirmeye çevrilmiyor: karar render katmanında
+  // veriliyor (bkz. AppShell). Loader'dan redirect etmek embedded parametreleri
+  // düşürüp kullanıcıyı login ekranına atıyordu.
   return json({
     apiKey: process.env.SHOPIFY_API_KEY || "",
     isPaid,
@@ -68,19 +63,32 @@ export const loader = async ({ request }) => {
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData();
+  const { apiKey, isPaid, trialExpired } = useLoaderData();
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <LanguageProvider>
-        <AppShell />
+        <AppShell locked={!isPaid && trialExpired} />
       </LanguageProvider>
     </AppProvider>
   );
 }
 
-function AppShell() {
+/**
+ * Deneme süresi dolduğunda hangi sayfaların erişilebilir kalacağını belirler.
+ *
+ * @param {string} pathname - Aktif rota, örn. "/app/subscribers"
+ * @returns {boolean} true → sayfa normal render edilir, false → kilit ekranı
+ */
+function isPathAllowedDuringLockout(pathname) {
+  // Plans sayfası her zaman açık kalmalı, yoksa abone olunamaz.
+  return pathname.startsWith("/app/plans");
+}
+
+function AppShell({ locked }) {
   const { t, lang, setLang } = useLanguage();
+  const { pathname } = useLocation();
+  const showLock = locked && !isPathAllowedDuringLockout(pathname);
 
   return (
     <>
@@ -93,8 +101,53 @@ function AppShell() {
         <Link to="/app/plans">{t("nav_plans")}</Link>
       </NavMenu>
       <LanguageSelector lang={lang} setLang={setLang} />
-      <Outlet />
+      {showLock ? <TrialEndedScreen /> : <Outlet />}
     </>
+  );
+}
+
+function TrialEndedScreen() {
+  const { t } = useLanguage();
+
+  return (
+    <Page>
+      <div style={{ maxWidth: "520px", margin: "48px auto 0" }}>
+        <Card>
+          <BlockStack gap="500">
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "44px", lineHeight: 1, marginBottom: "12px" }}>🎡</div>
+              <Text variant="headingLg" as="h2">{t("lock_title")}</Text>
+            </div>
+
+            <Text variant="bodyMd" tone="subdued" alignment="center">
+              {t("lock_desc")}
+            </Text>
+
+            <div
+              style={{
+                background: "#f0fdf4",
+                border: "1px solid #86efac",
+                borderRadius: "10px",
+                padding: "12px 16px",
+                textAlign: "center",
+              }}
+            >
+              <Text variant="bodySm">{t("lock_reassure")}</Text>
+            </div>
+
+            <Link to="/app/plans" style={{ textDecoration: "none" }}>
+              <Button variant="primary" size="large" fullWidth>
+                {t("lock_cta")}
+              </Button>
+            </Link>
+
+            <Text variant="bodySm" tone="subdued" alignment="center">
+              {t("lock_footnote")}
+            </Text>
+          </BlockStack>
+        </Card>
+      </div>
+    </Page>
   );
 }
 
