@@ -81,8 +81,10 @@ export default function App() {
  * @returns {boolean} true → sayfa normal render edilir, false → kilit ekranı
  */
 function isPathAllowedDuringLockout(pathname) {
-  // Plans sayfası her zaman açık kalmalı, yoksa abone olunamaz.
-  return pathname.startsWith("/app/plans");
+  // Kilitlenen tek yer çark yönetimi: ürünün asıl değeri orada.
+  // Merchant kendi verisine (aboneler, analiz, dışa aktarma) ve plans
+  // sayfasına erişmeye devam eder — veriyi rehin almıyoruz.
+  return !pathname.startsWith("/app/wheels");
 }
 
 function AppShell({ locked }) {
