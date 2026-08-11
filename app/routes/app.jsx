@@ -1,4 +1,4 @@
-import { json, redirect } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
@@ -24,7 +24,10 @@ const getBillingIsTest = () => {
 };
 
 export const loader = async ({ request }) => {
-  const { billing, session } = await authenticate.admin(request);
+  // redirect'i buradan alıyoruz: Remix'in düz redirect'i aksine embedded
+  // parametreleri (shop, host) hedefe taşır. Düz redirect kullanılırsa
+  // /app/plans parametresiz yüklenir ve authenticate.admin() login'e atar.
+  const { billing, session, redirect } = await authenticate.admin(request);
   const isTest = getBillingIsTest();
 
   // Check billing status without forcing a redirect
